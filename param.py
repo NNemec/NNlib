@@ -37,16 +37,22 @@ class Param:
 	if not hasattr(data,name):
 	    setattr(data,name,value)
 
-    def activate(self,data,copy=False):
+    def write(self,data):
         if isinstance(data,pytables.Group):
             data = data._v_attrs
         elif isinstance(data,pytables.Leaf):
             data = data.attrs
-        if copy:
-            for name in data._v_attrnamesuser:
-                delattr(data,name)
-            for name in self.data._v_attrnamesuser:
-                setattr(data,name,getattr(self.data,name))
+        for name in data._v_attrnamesuser:
+            delattr(data,name)
+        for name in self.data._v_attrnamesuser:
+            setattr(data,name,getattr(self.data,name))
+        self.__dict__['data'] = data
+
+    def read(self,data):
+        if isinstance(data,pytables.Group):
+            data = data._v_attrs
+        elif isinstance(data,pytables.Leaf):
+            data = data.attrs
         self.__dict__['data'] = data
 
     def settemp(self,name,value=None):
@@ -75,14 +81,6 @@ class Param:
 
 param = Param()
 
-
-
-
-    def setdefaults(self):
-        data = self.data
-
-        for name in data._v_attrnamesuser:
-            delattr(data,name)
 
 param.createdefault("LOPEZ_SANCHO_ETA", 1e-5*eV)
 param.createdefault("LOPEZ_SANCHO_EPSILON", 1e-4*eV)
