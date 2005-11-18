@@ -1,6 +1,7 @@
 from calc import *
 from param import param
 from copy import deepcopy
+from xyz import armchair, zigzag, chiral, swcnt
 
 class atom:
     def __init__(self,typ,pos):
@@ -78,86 +79,6 @@ def square_ladder(N,spacing=1):
 
 def linchain():
     return square_ladder(1)
-
-def armchair(N):
-    CC_distance = param.GRAPHENE_CC_DISTANCE
-
-    period = c_[0,0,sqrt(3)*CC_distance]
-    circumference = N*2*1.5*CC_distance
-    radius = circumference/(2*pi)
-    angle = 2*pi/(6*N)
-
-    rot = Matrix(eye(3))
-    rot[0,0] = cos(angle)
-    rot[1,1] = cos(angle)
-    rot[0,1] = sin(angle)
-    rot[1,0] = -sin(angle)
-    rot2 = rot*rot
-    rot3 = rot2*rot
-    rot4 = rot2*rot2
-    rot6 = rot3*rot3
-
-    at = atom('C',c_[radius,0,0])
-
-    cell = structure()
-    cell.atoms = [
-        at.shift(period/2),
-        at.rotate(rot),
-        at.rotate(rot3),
-        at.rotate(rot4).shift(period/2)
-    ]
-
-    res = chain(period)
-    for i in range(N):
-        res.atoms.extend(cell.atoms)
-        cell = cell.rotate(rot6)
-    res.radius = radius
-
-    return res
-
-def zigzag(N):
-    CC_distance = param.GRAPHENE_CC_DISTANCE
-
-    period = c_[0,0,3*CC_distance]
-    circumference = N*sqrt(3)*CC_distance
-    radius = circumference/(2*pi)
-    angle = pi/N
-
-    rot = Matrix(eye(3))
-    rot[0,0] = cos(angle)
-    rot[1,1] = cos(angle)
-    rot[0,1] = sin(angle)
-    rot[1,0] = -sin(angle)
-    rot2 = rot*rot
-
-    at = atom('C',c_[radius,0,0])
-
-    cell = structure()
-    cell.atoms = [
-        at.shift(period/6),
-        at.shift(period/2),
-        at.rotate(rot),
-        at.rotate(rot).shift(period/1.5)
-    ]
-
-    res = chain(period)
-    for i in range(N):
-        res.atoms.extend(cell.atoms)
-        cell = cell.rotate(rot2)
-    res.radius = radius
-
-    return res
-
-def swcnt(V):
-    assert len(V)==2
-    if V[0] == V[1]:
-        return armchair(V[0])
-    elif V[1] == 0:
-        return zigzag(V[0])
-    elif V[0] == 0:
-        return zigzag(V[1])
-    else:
-        raise RuntimeError, "chiral tubes not implemented"
 
 def merge(chain_A,chain_B):
     assert(chain_A.period == chain_B.period)

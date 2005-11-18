@@ -1,27 +1,35 @@
 from calc import *
 
-import bfield as bf
 import xyz
 
 from param import param
 
 class chain:
-    def __init__(self,xyz_chain,H_int_B0,H_hop_B0):
+    def __init__(self,H_int_B0,H_hop_B0,xyz_chain=None,):
         assert type(H_int_B0) is type(Matrix(()))
         assert type(H_hop_B0) is type(Matrix(()))
-        assert isinstance(xyz_chain,xyz.chain)
-        self.xyz = xyz_chain
-        self.xyz_shifted = xyz_chain.shift(xyz_chain.period)
-        self.N_atoms = len(self.xyz.atoms)
+        self.N_atoms = shape(H_int_B0,0)
         assert(shape(H_int_B0) == (self.N_atoms,self.N_atoms))
         assert(shape(H_hop_B0) == (self.N_atoms,self.N_atoms))
-        self.H_int_B0 = H_int_B0
-        self.H_hop_B0 = H_hop_B0
-        self.bfield = None
-        self.set_bfield(0)
+        self.H_int = H_int_B0
+        self.H_hop = H_hop_B0
+
+    	if xyz_chain is None:
+        else:
+            assert isinstance(xyz_chain,xyz.chain)
+            self.xyz = xyz_chain
+    	    self.xyz_shifted = xyz_chain.shift(xyz_chain.period)
+    	    assert self.N_atoms == len(self.N_atoms)
+            self.bfield = 0
+            self.H_int_B0 = H_int_B0
+            self.H_hop_B0 = H_hop_B0
+        
         self.energy = None
+        self.cache = {}
 
     def set_bfield(self,bfield):
+        import bfield as bf
+        assert hasattr(self,'xyz')
         if bfield != self.bfield:
             self.bfield = bfield
             if self.bfield == 0:
@@ -110,6 +118,31 @@ class chain:
         Gc = inv(E-self.H_int-Sigma_L-Sigma_R)
         return real(trace(Gamma_L*Gc*Gamma_R*adj(Gc)))
 
+def square_ladder(N,gamma=1*eV):
+    H_int = Matrix(zeros((N,N),'D'))
+    H_hop = Matrix(zeros((N,N),'D'))
+    
+    for n in range(1,N):
+	H_int[n-1,n] = -gamma
+	H_int[n,n-1] = -gamma
+
+    for n in range(N):
+	H_hop[n,n] = -gamma
+
+        
+    spacing = param.GRAPHENE_CC_DISTANCE
+    res = chain(c_[0,0,spacing])
+    at = atom('C',c_[0,0,0])
+    sh = c_[spacing,0,0]
+    for n in range(N):
+        res.atoms.append(at.shift(sh*n))
+    return res
+
+def linchain(gamma=1*eV):
+    return square_ladder(N=1,gamma=gamma)
+
+
+
 def _tight_binding_1stNN_graphene_H(xyz_chain):
     N = len(xyz_chain.atoms)
     H_int = Matrix(zeros((N,N),'D'))
@@ -130,7 +163,7 @@ def _tight_binding_1stNN_graphene_H(xyz_chain):
 
 def tight_binding_1stNN_graphene(xyz_chain):
     (H_int,H_hop,N) = _tight_binding_1stNN_graphene_H(xyz_chain)
-    return chain(xyz_chain,H_int,H_hop)
+    return chain(H_int,H_hop,xyz_chain,)
 
 def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B):
     # based on the parametrization described in
@@ -163,12 +196,12 @@ def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B):
             H_hop[a,N_A+b] = interwall_hopping(pos_a,pos_b_hop)
             H_hop[N_A+b,a] = interwall_hopping(pos_b,pos_a_hop)
 
-    return chain(xyz_chain,H_int,H_hop)
+    return chain(H_int,H_hop,xyz_chain,)
 
 
-if __name__ == "__main__":
-    x = xyz.square_ladder(3)
-    x3 = x.multiply(3)
-    ch = chain(x3)
-
-    print ch.band_energies(pi/2)
+#if __name__ == "__main__":
+#    x = xyz.square_ladder(3)
+#    x3 = x.multiply(3)
+#    ch = chain(x3)
+#
+#    print ch.band_energies(pi/2)

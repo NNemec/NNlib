@@ -181,10 +181,7 @@ def swcnt(V):
     elif V[0] == 0:
         return zigzag(V[1])
     else:
-        raise RuntimeError, "chiral tubes not implemented"
-
-
-
+	return chiral(V[0],V[1])
 
 
 if __name__ == "__main__":
