@@ -24,18 +24,16 @@ class Param:
         self.reset()
 
     def setdefaults(self):
-        data = self.data
-
-        for name in data._v_attrnamesuser:
-            delattr(data,name)
+        for name in self.data._v_attrnamesuser:
+            delattr(self.data,name)
 	    
 	for name,value in self.defaults.iteritems():
-	    setattr(data,name,value)
+	    setattr(self.data,name,value)
 
     def createdefault(self,name,value):
 	self.defaults[name] = value
-	if not hasattr(data,name):
-	    setattr(data,name,value)
+	if not hasattr(self.data,name):
+	    setattr(self.data,name,value)
 
     def write(self,data):
         if isinstance(data,pytables.Group):
@@ -89,8 +87,8 @@ param.createdefault("GRAPHENE_CC_DISTANCE", 1.4226*angstrom)
 param.createdefault("GRAPHITE_INTERLAYER_DISTANCE", 3.44*angstrom)
 param.createdefault("GRAPHENE_1STNN_HOPPING", 2.66*eV)
 
-param.createdefault("LATTICE_CONSTANT", data.GRAPHENE_CC_DISTANCE)
-param.createdefault("HOPPING_CONSTANT", data.GRAPHENE_1STNN_HOPPING)
+param.createdefault("LATTICE_CONSTANT", param.GRAPHENE_CC_DISTANCE)
+param.createdefault("HOPPING_CONSTANT", param.GRAPHENE_1STNN_HOPPING)
 
 #        data.LEAD_TYPE", "wideband"
 #        data.LEAD_TYPE", "coating_wideband"
