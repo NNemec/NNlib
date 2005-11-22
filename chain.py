@@ -3,27 +3,31 @@ from calc import *
 import xyz
 
 from param import param
+from units import *
+
+param.createdefault("LOPEZ_SANCHO_ETA", 1e-5*eV)
+param.createdefault("LOPEZ_SANCHO_EPSILON", 1e-4*eV)
+param.createdefault("LOPEZ_SANCHO_MAXSTEPS", 100)
 
 class chain:
     def __init__(self,H_int_B0,H_hop_B0,xyz_chain=None,):
         assert type(H_int_B0) is type(Matrix(()))
         assert type(H_hop_B0) is type(Matrix(()))
-        self.N_atoms = shape(H_int_B0,0)
-        assert(shape(H_int_B0) == (self.N_atoms,self.N_atoms))
-        assert(shape(H_hop_B0) == (self.N_atoms,self.N_atoms))
+        self.N_atoms = H_int_B0.shape[0]
+        assert(H_int_B0.shape == (self.N_atoms,self.N_atoms))
+        assert(H_hop_B0.shape == (self.N_atoms,self.N_atoms))
         self.H_int = H_int_B0
         self.H_hop = H_hop_B0
+        self.H_int_B0 = H_int_B0
+        self.H_hop_B0 = H_hop_B0
 
-    	if xyz_chain is None:
-        else:
+        if xyz_chain is not None:
             assert isinstance(xyz_chain,xyz.chain)
             self.xyz = xyz_chain
-    	    self.xyz_shifted = xyz_chain.shift(xyz_chain.period)
-    	    assert self.N_atoms == len(self.N_atoms)
+            self.xyz_shifted = xyz_chain.shift(xyz_chain.period)
+            assert self.N_atoms == len(self.N_atoms)
             self.bfield = 0
-            self.H_int_B0 = H_int_B0
-            self.H_hop_B0 = H_hop_B0
-        
+
         self.energy = None
         self.cache = {}
 
@@ -76,7 +80,7 @@ class chain:
             epsilon_R = epsilon_R - temp_agb
 
             i = i+1;
-            if i > 100:
+            if i > param.LOPEZ_SANCHO_MAXSTEPS:
                 raise "Lopez Sancho does not converge"
 
         self._G_bulk = inv(epsilon)
@@ -118,30 +122,36 @@ class chain:
         Gc = inv(E-self.H_int-Sigma_L-Sigma_R)
         return real(trace(Gamma_L*Gc*Gamma_R*adj(Gc)))
 
-def square_ladder(N,gamma=1*eV):
+    def multiply(self,N):
+        xyz = None
+        A = self.N_atoms
+        if hasattr(self,'xyz'):
+            xyz = self.xyz.multiply(N)
+        H_int = Matrix(zeros((N*A,N*A),'D'))
+        for n in range(N):
+            H_int[n*A:(n+1)*A,n*A:(n+1)*A] = self.H_int_B0
+        for n in range(1,N):
+            H_int[(n-1)*A:n*A,n*A:(n+1)*A] = self.H_hop_B0
+            H_int[n*A:(n+1)*A,(n-1)*A:n*A] = adj(self.H_hop_B0)
+        H_hop = Matrix(zeros((N*A,N*A),'D'))
+        H_hop[(N-1)*A:N*A,0:A] = self.H_hop_B0
+        return chain(H_int,H_hop,xyz)
+
+def square_ladder(N,gamma):
     H_int = Matrix(zeros((N,N),'D'))
     H_hop = Matrix(zeros((N,N),'D'))
-    
+
     for n in range(1,N):
-	H_int[n-1,n] = -gamma
-	H_int[n,n-1] = -gamma
+        H_int[n-1,n] = -gamma
+        H_int[n,n-1] = -gamma
 
     for n in range(N):
-	H_hop[n,n] = -gamma
+        H_hop[n,n] = -gamma
 
-        
-    spacing = param.GRAPHENE_CC_DISTANCE
-    res = chain(c_[0,0,spacing])
-    at = atom('C',c_[0,0,0])
-    sh = c_[spacing,0,0]
-    for n in range(N):
-        res.atoms.append(at.shift(sh*n))
-    return res
+    return chain(H_int,H_hop)
 
-def linchain(gamma=1*eV):
+def linchain(gamma):
     return square_ladder(N=1,gamma=gamma)
-
-
 
 def _tight_binding_1stNN_graphene_H(xyz_chain):
     N = len(xyz_chain.atoms)
@@ -149,7 +159,7 @@ def _tight_binding_1stNN_graphene_H(xyz_chain):
     H_hop = Matrix(zeros((N,N),'D'))
     maxdist = param.GRAPHENE_CC_DISTANCE * 1.1
     gamma = param.GRAPHENE_1STNN_HOPPING
-    
+
     for i in range(N):
         for j in range(i+1,N):
             if norm(xyz_chain.atoms[i].pos - xyz_chain.atoms[j].pos) < maxdist:
@@ -168,7 +178,7 @@ def tight_binding_1stNN_graphene(xyz_chain):
 def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B):
     # based on the parametrization described in
     # doi:10.1103/PhysRevB.64.121401
-    
+
     def interwall_hopping(pos_a,pos_b):
         d = norm(pos_b-pos_a);
         cos_theta = vdot(pos_a[:2],pos_b[:2])/(norm(pos_a[:2])*norm(pos_b[:2]));

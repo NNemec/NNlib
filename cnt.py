@@ -147,8 +147,8 @@ def chiral(M,N):
     dz_b = - CC_distance * sqrt(3) * sqrt((2*M+N)**2 + (M+2*N)**2 - (2*M+N)*(M+2*N)) * M / (2*(M*M + M*N + N*N))
     dz_c = dz_a - dz_b
 
-    for i in sorted(locals().keys()):
-        print i+":\t"+str(locals()[i])
+#    for i in sorted(locals().keys()):
+#        print i+":\t"+str(locals()[i])
 
     atoms = [None] * Natoms
 

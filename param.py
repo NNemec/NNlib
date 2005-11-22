@@ -20,20 +20,20 @@ class Param:
         self.__dict__['data'] = DataDummy()
 
     def __init__(self):
-	self.__dict__['defaults'] = {}
+        self.__dict__['defaults'] = {}
         self.reset()
 
     def setdefaults(self):
         for name in self.data._v_attrnamesuser:
             delattr(self.data,name)
-	    
-	for name,value in self.defaults.iteritems():
-	    setattr(self.data,name,value)
+
+        for name,value in self.defaults.iteritems():
+            setattr(self.data,name,value)
 
     def createdefault(self,name,value):
-	self.defaults[name] = value
-	if not hasattr(self.data,name):
-	    setattr(self.data,name,value)
+        self.defaults[name] = value
+        if not hasattr(self.data,name):
+            setattr(self.data,name,value)
 
     def write(self,data):
         if isinstance(data,pytables.Group):
@@ -79,9 +79,6 @@ class Param:
 
 param = Param()
 
-
-param.createdefault("LOPEZ_SANCHO_ETA", 1e-5*eV)
-param.createdefault("LOPEZ_SANCHO_EPSILON", 1e-4*eV)
 
 param.createdefault("GRAPHENE_CC_DISTANCE", 1.4226*angstrom)
 param.createdefault("GRAPHITE_INTERLAYER_DISTANCE", 3.44*angstrom)

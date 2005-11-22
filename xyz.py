@@ -1,7 +1,7 @@
 from calc import *
 from param import param
 from copy import deepcopy
-from xyz import armchair, zigzag, chiral, swcnt
+#from cnt import armchair, zigzag, chiral, swcnt
 
 class atom:
     def __init__(self,typ,pos):
