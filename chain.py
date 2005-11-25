@@ -99,9 +99,11 @@ class chain:
         self.set_energy(energy)
         return self._G_bulk
 
+    def H_eff(self,k):
+        return self.H_int + exp(1j*k)*self.H_hop + exp(-1j*k)*adj(self.H_hop)
+
     def band_energies(self,k):
-        H_eff = self.H_int + exp(1j*k)*self.H_hop + exp(-1j*k)*adj(self.H_hop)
-        return array(sorted(list(real(eigvals(H_eff)))))
+        return array(sorted(list(real(eigvals(H_eff(k))))))
 
     def DOS(self,energy=None):
         return -1./pi*imag(trace(self.G_bulk(energy)))/self.N_atoms
