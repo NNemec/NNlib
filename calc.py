@@ -2,6 +2,7 @@ import os, sys
 import scipy
 from scipy import *
 from scipy.linalg import *
+from time import time
 
 #import numarray
 #import Numeric

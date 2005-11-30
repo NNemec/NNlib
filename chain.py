@@ -25,7 +25,7 @@ class chain:
             assert isinstance(xyz_chain,xyz.chain)
             self.xyz = xyz_chain
             self.xyz_shifted = xyz_chain.shift(xyz_chain.period)
-            assert self.N_atoms == len(self.N_atoms)
+            assert self.N_atoms == len(self.xyz.atoms)
             self.bfield = 0
 
         self.energy = None

@@ -41,7 +41,7 @@ def armchair(N):
     rot4 = rot2*rot2
     rot6 = rot3*rot3
 
-    at = atom('C',c_[radius,0,0])
+    at = xyz.atom('C',c_[radius,0,0])
 
     cell = xyz.structure()
     cell.atoms = [
@@ -74,7 +74,7 @@ def zigzag(N):
     rot[1,0] = -sin(angle)
     rot2 = rot*rot
 
-    at = atom('C',c_[radius,0,0])
+    at = xyz.atom('C',c_[radius,0,0])
 
     cell = xyz.structure()
     cell.atoms = [
