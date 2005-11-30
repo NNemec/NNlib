@@ -99,7 +99,15 @@ def gcd(a,b):
         a,b = b%a,a
     return b
 
-def chiral(M,N):
+def is_metallic(M,N):
+    assert M >= 0
+    assert N >= 0
+    if M==0:
+        M,N=N,0
+        assert M > 0
+    return ((M-N)%3 == 0)
+
+def radius(M,N):
     assert M >= 0
     assert N >= 0
     if M==0:
@@ -108,7 +116,16 @@ def chiral(M,N):
     CC_distance = param.GRAPHENE_CC_DISTANCE
     metallic = ((M-N)%3 == 0)
     circumference = CC_distance * sqrt(3.0) * sqrt(M**2 + N**2 + M*N)
-    radius = circumference/(2*pi)
+    return circumference/(2*pi)
+
+def chiral(M,N):
+    assert M >= 0
+    assert N >= 0
+    if M==0:
+        M,N=N,0
+        assert M > 0
+    CC_distance = param.GRAPHENE_CC_DISTANCE
+    radius = radius(M,N)
     multiple = gcd(M,N)
     multiple_perp = gcd((M+2*N),(2*M+N))
     M_perp = (M+2*N) / multiple_perp
