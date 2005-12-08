@@ -29,7 +29,7 @@ Ampere = Joule / (Volt * second)  # Ampere
 Tesla = kg/(second**2 * Ampere)  # Tesla
 kT = 1e3*Tesla
 
-Phi_0 = planck / (2 * electron) # flux quantum
+Phi0 = planck / electron # flux quantum
 G_0 = 2*electron**2 / planck # conductance quantum
 
 k_B = 8.617343e-5*eV/Kelvin   # Boltzmann
