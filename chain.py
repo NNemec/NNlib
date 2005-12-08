@@ -103,7 +103,7 @@ class chain:
         return self.H_int + exp(1j*k)*self.H_hop + exp(-1j*k)*adj(self.H_hop)
 
     def band_energies(self,k):
-        return array(sorted(list(real(eigvals(H_eff(k))))))
+        return array(sorted(list(real(eigvals(self.H_eff(k))))))
 
     def DOS(self,energy=None):
         return -1./pi*imag(trace(self.G_bulk(energy)))/self.N_atoms
