@@ -87,16 +87,8 @@ param.createdefault("GRAPHENE_1STNN_HOPPING", 2.66*eV)
 param.createdefault("LATTICE_CONSTANT", param.GRAPHENE_CC_DISTANCE)
 param.createdefault("HOPPING_CONSTANT", param.GRAPHENE_1STNN_HOPPING)
 
-#        data.LEAD_TYPE", "wideband"
-#        data.LEAD_TYPE", "coating_wideband"
-#        data.WIDEBAND_ENERGY", 1.0*eV
-param.createdefault("LEAD_TYPE", "lopez_sancho")
-
 #        data.DO_CALC_CHANNELS", True
 #        data.NO_DISORDER_IN_CONTACTS", True
-param.createdefault("BFIELD_IN_LEADS", True)
-param.createdefault("BFIELD_DIRECTION", 'perp')
-#        data.BFIELD_DIRECTION", 'par'
 
 param.createdefault("DISORDER_TYPE", "diagonal")
 #        data.DISORDER_TYPE", "hopping"

@@ -68,13 +68,22 @@ class chain(structure):
                 res.atoms.append(atom.shift(n*self.period))
         return res
 
-def square_ladder(N,spacing=1):
+def square_ladder(N):
     spacing = param.GRAPHENE_CC_DISTANCE
     res = chain(c_[0,0,spacing])
     at = atom('C',c_[0,0,0])
     sh = c_[spacing,0,0]
     for n in range(N):
         res.atoms.append(at.shift(sh*n))
+    return res
+
+def square_tube(N):
+    spacing = param.GRAPHENE_CC_DISTANCE
+    radius = N*spacing/(2*pi)
+    res = chain(c_[0,0,spacing])
+    for n in range(N):
+	phi = 2*pi*n/N
+	res.atoms.append(atom('C',c_[cos(phi)*radius,sin(phi)*radius,0]))
     return res
 
 def linchain():

@@ -2,6 +2,9 @@ from units import *
 from calc import *
 from param import param
 
+param.createdefault("BFIELD_DIRECTION", 'perp')
+#        data.BFIELD_DIRECTION", 'par'
+
 def calc_H_int(bfield,H_int_B0,xyz):
     assert(shape(H_int_B0)[0] == len(xyz.atoms))
     assert(shape(H_int_B0)[1] == len(xyz.atoms))
@@ -16,7 +19,7 @@ def calc_H_int(bfield,H_int_B0,xyz):
 	else:
     	    raise "Error: unknown BFIELD_DIRECTION"
     else:
-	assert len(bfield) == 3:
+	assert len(bfield) == 3
 	B_e_hbar = array(bfield) * electron / hbar
 
     H_int = H_int_B0.copy()
@@ -50,11 +53,10 @@ def calc_H_hop(bfield,H_hop_B0,xyz_0,xyz_1):
 	else:
     	    raise "Error: unknown BFIELD_DIRECTION"
     else:
-	assert len(bfield) == 3:
+	assert len(bfield) == 3
 	B_e_hbar = array(bfield) * electron / hbar
 
     H_hop = H_hop_B0.copy()
-
     for i in range(len(xyz_0.atoms)):
         for j in range(len(xyz_1.atoms)):
             if H_hop[i,j] != 0:

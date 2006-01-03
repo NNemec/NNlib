@@ -5,6 +5,8 @@ from param import param
 import lead as _lead
 import conductor as _conductor
 
+param.createdefault("BFIELD_IN_LEADS", True)
+
 class twoprobe:
     def __init__(self,conductor,lead_L,lead_R):
         self.energy = None
@@ -53,7 +55,7 @@ class twoprobe:
                 self.Sigma_R.append(l.Sigma_R())
         return self.conductor.transmission_new(self.Sigma_L,self.Sigma_R)
 
-    def LDOS(self,energy=None):
+    def LDOS(self):
         if self.Sigma_L is None:
             self.Sigma_L = []
             for l in self.lead_L:
@@ -109,6 +111,10 @@ class twoprobe_nondiagleads:
         )
 
 
+#        data.LEAD_TYPE", "wideband"
+#        data.LEAD_TYPE", "coating_wideband"
+#        data.WIDEBAND_ENERGY", 1.0*eV
+param.createdefault("LEAD_TYPE", "lopez_sancho")
 
 def create_from_chain(chain,conductor_size,contact_size_L=1,contact_size_R=1):
     conductor = _conductor.create_from_chain(chain,conductor_size)
@@ -144,7 +150,6 @@ def create_from_chain(chain,conductor_size,contact_size_L=1,contact_size_R=1):
         [lead]*contact_size_L,
         [lead]*contact_size_R,
     )
-
 
 def create_from_aperiodic(aperiodic,contact_length_L,contact_length_R):
     conductor = _conductor.create_from_aperiodic_triozon(aperiodic)

@@ -36,7 +36,7 @@ class chain:
         assert hasattr(self,'xyz')
         if bfield != self.bfield:
             self.bfield = bfield
-            if self.bfield == 0:
+            if sum(array(self.bfield)**2) == 0:
                 self.H_int = self.H_int_B0
                 self.H_hop = self.H_hop_B0
             else:
