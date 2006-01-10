@@ -5,6 +5,7 @@ from units import *
 from param import param
 import xyz
 
+
 def SDOS_armchair_analytic(
     E, # in units of gamma
     N, # chirality of tube: (N,N)
@@ -107,6 +108,8 @@ def is_metallic(M,N):
         assert M > 0
     return ((M-N)%3 == 0)
 
+A_plaquette = a**2 * 3**.5 * 1.5
+
 def radius(M,N):
     assert M >= 0
     assert N >= 0
@@ -117,6 +120,9 @@ def radius(M,N):
     metallic = ((M-N)%3 == 0)
     circumference = CC_distance * sqrt(3.0) * sqrt(M**2 + N**2 + M*N)
     return circumference/(2*pi)
+
+def A_section(M,N):
+    return radius(M,N)**2 * pi
 
 def chiral(M,N):
     assert M >= 0
