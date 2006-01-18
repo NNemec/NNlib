@@ -1,7 +1,11 @@
 import os, sys
-import scipy
-from scipy import *
-from scipy.linalg import *
+import numpy
+from numpy import *
+from numpy.linalg import *
+
+#import scipy
+#from scipy import *
+#from scipy.linalg import *
 from time import time
 
 #import numarray
@@ -16,10 +20,10 @@ def adj(X):
     return conj(transpose(X))
 
 def inv(M):
-    return Matrix(scipy.linalg.inv(M))
+    return Matrix(numpy.linalg.inv(M))
 
 def eigvals(M):
-    return scipy.linalg.eigvals(M)
+    return numpy.linalg.eigvals(M)
 
 def integral(x,y):
     return .5*sum((x[1:]-x[:-1])*(y[1:]+y[:-1]))

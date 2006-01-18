@@ -211,9 +211,11 @@ def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B):
     return chain(H_int,H_hop,xyz_chain,)
 
 
-#if __name__ == "__main__":
-#    x = xyz.square_ladder(3)
-#    x3 = x.multiply(3)
-#    ch = chain(x3)
-#
-#    print ch.band_energies(pi/2)
+if __name__ == "__main__":
+    import cnt
+    x = cnt.armchair(20)
+    ch = tight_binding_1stNN_graphene(x)
+
+    a = ch.Gs_L(energy=0.5)
+    b = ch.Gs_L(energy=1.0)
+    
