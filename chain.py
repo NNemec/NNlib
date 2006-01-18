@@ -108,6 +108,9 @@ class chain:
     def DOS(self,energy=None):
         return -1./pi*imag(trace(self.G_bulk(energy)))/self.N_atoms
 
+    def LDOS(self,energy=None):
+        return -1./pi*imag(diag(self.G_bulk(energy)))
+
     def SDOS_L(self,energy=None):
         return -1./pi*imag(trace(self.Gs_L(energy)))/self.N_atoms
 
