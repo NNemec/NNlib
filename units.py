@@ -16,6 +16,7 @@ meter = angstrom * 1e10
 Joule =  eV * 6.241506e+18
 Coulomb = electron / 1.60217733e-19
 bohr = 5.2918937910e-1 * angstrom
+Angstrom = angstrom
 
 Volt = eV / electron
 
