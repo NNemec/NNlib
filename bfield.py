@@ -2,25 +2,28 @@ from units import *
 from calc import *
 from param import param
 
-param.createdefault("BFIELD_DIRECTION", 'perp')
-#        data.BFIELD_DIRECTION", 'par'
+param.createdefault("BFIELD_DIRECTION", 'perp')    # 'par', 'lateral'
+
+def _conv_bfield(bfield):
+    if type(bfield) == float:
+	if param.BFIELD_DIRECTION == 'perp':
+    	    return bfield * array((0.,1.,0.))
+	elif param.BFIELD_DIRECTION == 'par':
+    	    return bfield * array((0.,0.,1.))
+	elif param.BFIELD_DIRECTION == 'lateral':
+    	    return bfield * array((1.,0.,0.))
+	else:
+    	    raise "Error: unknown BFIELD_DIRECTION"
+    else:
+	bfield = asarray(bfield)
+	assert bfield.shape == (3,)
+	return bfield
 
 def calc_H_int(bfield,H_int_B0,xyz):
     assert(shape(H_int_B0)[0] == len(xyz.atoms))
     assert(shape(H_int_B0)[1] == len(xyz.atoms))
 
-    if type(bfield) == float:
-	if param.BFIELD_DIRECTION == 'perp':
-    	    B_e_hbar = bfield * array((0.,1.,0.)) * electron / hbar
-	elif param.BFIELD_DIRECTION == 'par':
-    	    B_e_hbar = bfield * array((0.,0.,1.)) * electron / hbar
-	elif param.BFIELD_DIRECTION == 'lateral':
-    	    B_e_hbar = bfield * array((1.,0.,0.)) * electron / hbar
-	else:
-    	    raise "Error: unknown BFIELD_DIRECTION"
-    else:
-	assert len(bfield) == 3
-	B_e_hbar = array(bfield) * electron / hbar
+    B_e_hbar = _conv_bfield(bfield) * electron / hbar
 
     H_int = H_int_B0.copy()
     for i in range(len(xyz.atoms)):
@@ -43,18 +46,7 @@ def calc_H_hop(bfield,H_hop_B0,xyz_0,xyz_1):
     assert(shape(H_hop_B0)[0] == len(xyz_0.atoms))
     assert(shape(H_hop_B0)[1] == len(xyz_1.atoms))
 
-    if type(bfield) == float:
-	if param.BFIELD_DIRECTION == 'perp':
-    	    B_e_hbar = bfield * array((0.,1.,0.)) * electron / hbar
-	elif param.BFIELD_DIRECTION == 'par':
-    	    B_e_hbar = bfield * array((0.,0.,1.)) * electron / hbar
-	elif param.BFIELD_DIRECTION == 'lateral':
-    	    B_e_hbar = bfield * array((1.,0.,0.)) * electron / hbar
-	else:
-    	    raise "Error: unknown BFIELD_DIRECTION"
-    else:
-	assert len(bfield) == 3
-	B_e_hbar = array(bfield) * electron / hbar
+    B_e_hbar = _conv_bfield(bfield) * electron / hbar
 
     H_hop = H_hop_B0.copy()
     for i in range(len(xyz_0.atoms)):
