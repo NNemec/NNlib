@@ -27,69 +27,37 @@ def SDOS_armchair_analytic(
 def armchair(N):
     CC_distance = param.GRAPHENE_CC_DISTANCE
 
-    period = c_[0,0,sqrt(3)*CC_distance]
-    circumference = N*2*1.5*CC_distance
-    radius = circumference/(2*pi)
-    angle = 2*pi/(6*N)
+    period = 3**.5 * CC_distance
+    r = N*2*1.5*CC_distance / (2*pi)
 
-    rot = Matrix(eye(3))
-    rot[0,0] = cos(angle)
-    rot[1,1] = cos(angle)
-    rot[0,1] = sin(angle)
-    rot[1,0] = -sin(angle)
-    rot2 = rot*rot
-    rot3 = rot2*rot
-    rot4 = rot2*rot2
-    rot6 = rot3*rot3
-
-    at = xyz.atom('C',c_[radius,0,0])
-
-    cell = xyz.structure()
-    cell.atoms = [
-        at.shift(period/2),
-        at.rotate(rot),
-        at.rotate(rot3),
-        at.rotate(rot4).shift(period/2)
-    ]
-
-    res = xyz.chain(period)
-    for i in range(N):
-        res.atoms.extend(cell.atoms)
-        cell = cell.rotate(rot6)
-    res.radius = radius
+    res = xyz.chain((0,0,period))
+    res.radius = r
+    for n in range(N):
+        res.atoms.extend([
+	    xyz.atom('C',(r*cos(2*pi*(6*n  )/(6*N)),r*sin(2*pi*(6*n  )/(6*N)),period/2)),
+	    xyz.atom('C',(r*cos(2*pi*(6*n+1)/(6*N)),r*sin(2*pi*(6*n+1)/(6*N)),0)),
+	    xyz.atom('C',(r*cos(2*pi*(6*n+3)/(6*N)),r*sin(2*pi*(6*n+3)/(6*N)),0)),
+	    xyz.atom('C',(r*cos(2*pi*(6*n+4)/(6*N)),r*sin(2*pi*(6*n+4)/(6*N)),period/2)),
+	])
 
     return res
+
 
 def zigzag(N):
     CC_distance = param.GRAPHENE_CC_DISTANCE
 
-    period = c_[0,0,3*CC_distance]
-    circumference = N*sqrt(3)*CC_distance
-    radius = circumference/(2*pi)
-    angle = pi/N
+    period = 3*CC_distance
+    r = N * 3.**.5 * CC_distance / (2*pi)
 
-    rot = Matrix(eye(3))
-    rot[0,0] = cos(angle)
-    rot[1,1] = cos(angle)
-    rot[0,1] = sin(angle)
-    rot[1,0] = -sin(angle)
-    rot2 = rot*rot
-
-    at = xyz.atom('C',c_[radius,0,0])
-
-    cell = xyz.structure()
-    cell.atoms = [
-        at.shift(period/6),
-        at.shift(period/2),
-        at.rotate(rot),
-        at.rotate(rot).shift(period/1.5)
-    ]
-
-    res = xyz.chain(period)
-    for i in range(N):
-        res.atoms.extend(cell.atoms)
-        cell = cell.rotate(rot2)
-    res.radius = radius
+    res = xyz.chain((0,0,period))
+    res.radius = r
+    for n in range(N):
+        res.atoms.extend([
+    	    xyz.atom('C',(r*cos(2*pi*(2*n  )/(2*N)),r*sin(2*pi*(2*n  )/(2*N)),period/6)),
+    	    xyz.atom('C',(r*cos(2*pi*(2*n  )/(2*N)),r*sin(2*pi*(2*n  )/(2*N)),period/2)),
+    	    xyz.atom('C',(r*cos(2*pi*(2*n+1)/(2*N)),r*sin(2*pi*(2*n+1)/(2*N)),0)),
+    	    xyz.atom('C',(r*cos(2*pi*(2*n+1)/(2*N)),r*sin(2*pi*(2*n+1)/(2*N)),period/1.5)),
+	])
 
     return res
 
@@ -130,7 +98,7 @@ def Natoms(M,N):
     assert M+N > 0
     multiple_perp = gcd((M+2*N),(2*M+N))
     Nplaquettes = 2 * (M**2 + N**2 + M*N)/multiple_perp
-    Natoms = Nplaquettes * 2
+    return Nplaquettes * 2
 
 def chiral(M,N):
     assert M >= 0
@@ -139,7 +107,7 @@ def chiral(M,N):
         M,N=N,0
         assert M > 0
     CC_distance = param.GRAPHENE_CC_DISTANCE
-    radius = radius(M,N)
+    r = radius(M,N)
     multiple = gcd(M,N)
     multiple_perp = gcd((M+2*N),(2*M+N))
     M_perp = (M+2*N) / multiple_perp
@@ -181,7 +149,8 @@ def chiral(M,N):
 #    for i in sorted(locals().keys()):
 #        print i+":\t"+str(locals()[i])
 
-    atoms = [None] * Natoms
+    res = xyz.chain((0,0,period))
+    res.radius = r
 
     n = 0
     for l in range(Nlines):
@@ -191,14 +160,11 @@ def chiral(M,N):
                 z_A = dz_a * l + dz_c * p
                 phi_B = phi_A + (dphi_a+dphi_b)/3
                 z_B = z_A + (dz_a+dz_b)/3
-                atoms[n] = xyz.atom('C',c_[cos(phi_A)*radius,sin(phi_A)*radius,z_A])
-                atoms[n+1] = xyz.atom('C',c_[cos(phi_B)*radius,sin(phi_B)*radius,z_B])
-                n += 2
-
-    res = xyz.chain(period)
-    for i in range(Natoms):
-        res.atoms = atoms
-    res.radius = radius
+                res.atoms.extend([
+		    xyz.atom('C',(cos(phi_A)*r,sin(phi_A)*r,z_A)),
+		    xyz.atom('C',(cos(phi_B)*r,sin(phi_B)*r,z_B)),
+		])
+    assert len(res.atoms) == Natoms
 
     return res
 
@@ -235,7 +201,8 @@ if __name__ == "__main__":
         plot(E,SDOS)
         show()
     else:
-        param.setdefaults()
-        ch = chiral(5,4)
-        ch.write_xyz_file('cnt-test.xyz')
+#        param.setdefaults()
+        zigzag(10).write_xyz_file('cnt-test-zigzag.xyz')
+        armchair(10).write_xyz_file('cnt-test-armchair.xyz')
+        chiral(5,4).write_xyz_file('cnt-test-chiral.xyz')
 

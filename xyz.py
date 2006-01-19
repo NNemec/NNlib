@@ -6,16 +6,16 @@ from copy import deepcopy
 class atom:
     def __init__(self,typ,pos):
         self.typ = typ
-        assert pos.shape == (3,)
-        self.pos = pos
+        self.pos = asarray(pos)
+        assert self.pos.shape == (3,)
 
     def shift(self,disp):
-        assert disp.shape == (3,)
+#        assert disp.shape == (3,)
         return atom(self.typ,self.pos+disp)
 
     def rotate(self,rot):
-        assert rot.shape == (3,3)
-        return atom(self.typ,dot(rot,self.pos))
+        assert asarray(rot).shape == (3,3)
+        return atom(self.typ,dot(asarray(rot),self.pos))
 
 class structure:
     def __init__(self):
@@ -52,14 +52,15 @@ class structure:
         f.readline()
         for n in range(Natoms):
             typ,x,y,z = f.readline().strip().split()
-            self.atoms.append(atom(typ,c_[float(x),float(y),float(z)]))
+            self.atoms.append(atom(typ,[float(x),float(y),float(z)]))
         assert f.read().strip() == ''
         f.close()
 
 class chain(structure):
     def __init__(self,period):
         structure.__init__(self)
-        self.period = period
+        self.period = asarray(period)
+        assert self.period.shape == (3,)
 
     def multiply(self,N):
         res = chain(N*self.period)
@@ -70,20 +71,18 @@ class chain(structure):
 
 def square_ladder(N):
     spacing = param.GRAPHENE_CC_DISTANCE
-    res = chain(c_[0,0,spacing])
-    at = atom('C',c_[0,0,0])
-    sh = c_[spacing,0,0]
+    res = chain((0,0,spacing))
     for n in range(N):
-        res.atoms.append(at.shift(sh*n))
+        res.atoms.append(atom('C',(spacing*n,0,0)))
     return res
 
 def square_tube(N):
     spacing = param.GRAPHENE_CC_DISTANCE
     radius = N*spacing/(2*pi)
-    res = chain(c_[0,0,spacing])
+    res = chain((0,0,spacing))
     for n in range(N):
 	phi = 2*pi*n/N
-	res.atoms.append(atom('C',c_[cos(phi)*radius,sin(phi)*radius,0]))
+	res.atoms.append(atom('C',(cos(phi)*radius,sin(phi)*radius,0)))
     return res
 
 def linchain():
