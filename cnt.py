@@ -124,6 +124,14 @@ def radius(M,N):
 def A_section(M,N):
     return radius(M,N)**2 * pi
 
+def Natoms(M,N):
+    assert M >= 0
+    assert N >= 0
+    assert M+N > 0
+    multiple_perp = gcd((M+2*N),(2*M+N))
+    Nplaquettes = 2 * (M**2 + N**2 + M*N)/multiple_perp
+    Natoms = Nplaquettes * 2
+
 def chiral(M,N):
     assert M >= 0
     assert N >= 0
