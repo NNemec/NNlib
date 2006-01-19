@@ -18,7 +18,7 @@ class conductor:
         self.xyz = xyz
         self.H_int_B0 = H_int
         self.H_hop_B0 = H_hop
-        self.bfield = 0
+        self.bfield = array((0,0,0))
         self.H_int = H_int
         self.H_hop = H_hop
         self.disorder = 0
@@ -27,7 +27,7 @@ class conductor:
 
     def set_bfield(self,bfield):
         import bfield as bf
-        if bfield != self.bfield:
+        if any(bfield != self.bfield):
             self.bfield = bfield
             self.H_int = [bf.calc_H_int(bfield,self.H_int_B0[n],self.xyz[n])
                           for n in range(len(self.H_int_B0))]

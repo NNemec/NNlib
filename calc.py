@@ -21,11 +21,15 @@ from time import time
 def adj(X):
     return X.H # conj(transpose(X))
 
-def inv(M):
+def inv(X):
     return X.I # Matrix(numpy.linalg.inv(M))
 
-def eigvals(M):
-    return numpy.linalg.eigvals(M)
+#def eigvals(X):
+#    return numpy.linalg.eigvals(X)
 
 def integral(x,y):
     return .5*sum((x[1:]-x[:-1])*(y[1:]+y[:-1]))
+
+def norm(X):
+    v = asarray(X).flatten()
+    return abs(dot(v,conj(v))**.5)

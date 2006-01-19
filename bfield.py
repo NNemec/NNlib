@@ -24,6 +24,8 @@ def calc_H_int(bfield,H_int_B0,xyz):
     assert(shape(H_int_B0)[1] == len(xyz.atoms))
 
     B_e_hbar = _conv_bfield(bfield) * electron / hbar
+    if all(B_e_hbar == 0):
+	return H_int_B0
 
     H_int = H_int_B0.copy()
     for i in range(len(xyz.atoms)):
@@ -48,6 +50,9 @@ def calc_H_hop(bfield,H_hop_B0,xyz_0,xyz_1):
 
     B_e_hbar = _conv_bfield(bfield) * electron / hbar
 
+    if all(B_e_hbar == 0):
+	return H_hop_B0
+	
     H_hop = H_hop_B0.copy()
     for i in range(len(xyz_0.atoms)):
         for j in range(len(xyz_1.atoms)):

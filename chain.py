@@ -26,7 +26,7 @@ class chain:
             self.xyz = xyz_chain
             self.xyz_shifted = xyz_chain.shift(xyz_chain.period)
             assert self.N_atoms == len(self.xyz.atoms)
-            self.bfield = 0
+            self.bfield = array((0,0,0))
 
         self.energy = None
         self.cache = {}
@@ -34,7 +34,7 @@ class chain:
     def set_bfield(self,bfield):
         import bfield as bf
         assert hasattr(self,'xyz')
-        if bfield != self.bfield:
+        if any(bfield != self.bfield):
             self.bfield = bfield
             if sum(array(self.bfield)**2) == 0:
                 self.H_int = self.H_int_B0
@@ -69,7 +69,7 @@ class chain:
 
         i = 0;
         EPS = param.LOPEZ_SANCHO_EPSILON;
-        while norm(alpha,1) > EPS or norm(beta,1) > EPS:
+        while abs(alpha).A.sum() + abs(beta).A.sum() > EPS:
             gamma = inv(epsilon)
             temp_agb = alpha*gamma*beta
             temp_bga = beta*gamma*alpha
