@@ -5,7 +5,7 @@ from param import param
 param.createdefault("BFIELD_DIRECTION", 'perp')    # 'par', 'lateral'
 
 def _conv_bfield(bfield):
-    if type(bfield) == float:
+    if isscalar(bfield):
 	if param.BFIELD_DIRECTION == 'perp':
     	    return bfield * array((0.,1.,0.))
 	elif param.BFIELD_DIRECTION == 'par':

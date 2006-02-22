@@ -15,13 +15,10 @@ class DataDummy:
         del self._v_attrnamesuser[name]
 
 class Param:
-    def reset(self):
-        self.__dict__['temp'] = {}
-        self.__dict__['data'] = DataDummy()
-
     def __init__(self):
         self.__dict__['defaults'] = {}
-        self.reset()
+        self.__dict__['temp'] = {}
+        self.__dict__['data'] = DataDummy()
 
     def setdefaults(self):
         for name in self.data._v_attrnamesuser:
@@ -35,7 +32,7 @@ class Param:
         if not hasattr(self.data,name):
             setattr(self.data,name,value)
 
-    def write(self,data):
+    def write(self,data=None):
         if isinstance(data,pytables.Group):
             data = data._v_attrs
         elif isinstance(data,pytables.Leaf):
@@ -45,6 +42,9 @@ class Param:
         for name in self.data._v_attrnamesuser:
             setattr(data,name,getattr(self.data,name))
         self.__dict__['data'] = data
+
+    def reset(self):
+	self.write(DataDummy())
 
     def read(self,data):
         if isinstance(data,pytables.Group):
