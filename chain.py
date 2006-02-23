@@ -9,6 +9,12 @@ param.createdefault("LOPEZ_SANCHO_ETA", 1e-5*eV)
 param.createdefault("LOPEZ_SANCHO_EPSILON", 1e-4*eV)
 param.createdefault("LOPEZ_SANCHO_MAXSTEPS", 100)
 
+param.createdefault("TRIOZON_BETA", param.GRAPHENE_1STNN_HOPPING / 8)
+param.createdefault("TRIOZON_A", 0.334 * nm)
+param.createdefault("TRIOZON_DELTA", 0.045 * nm)
+param.createdefault("TRIOZON_CUTOFF", param.TRIOZON_A+5*param.TRIOZON_DELTA)
+param.createdefault("TRIOZON_Z_CUTOFF", (param.TRIOZON_CUTOFF**2 - (0.95*param.GRAPHITE_INTERLAYER_DISTANCE)**2)**0.5)
+
 class chain:
     def __init__(self,H_int_B0,H_hop_B0,xyz_chain=None,):
         assert type(H_int_B0) is type(Matrix(()))

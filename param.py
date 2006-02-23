@@ -92,9 +92,3 @@ param.createdefault("HOPPING_CONSTANT", param.GRAPHENE_1STNN_HOPPING)
 
 param.createdefault("DISORDER_TYPE", "diagonal")
 #        data.DISORDER_TYPE", "hopping"
-
-param.createdefault("TRIOZON_BETA", param.GRAPHENE_1STNN_HOPPING / 8)
-param.createdefault("TRIOZON_A", 0.334 * nm)
-param.createdefault("TRIOZON_DELTA", 0.045 * nm)
-param.createdefault("TRIOZON_CUTOFF", param.TRIOZON_A+5*param.TRIOZON_DELTA)
-param.createdefault("TRIOZON_Z_CUTOFF", (param.TRIOZON_CUTOFF**2 - (0.95*param.GRAPHITE_INTERLAYER_DISTANCE)**2)**0.5)
