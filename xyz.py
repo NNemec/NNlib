@@ -89,7 +89,7 @@ def linchain():
     return square_ladder(1)
 
 def merge(chain_A,chain_B):
-    assert(chain_A.period == chain_B.period)
+    assert((chain_A.period == chain_B.period).all())
     res = chain(chain_A.period)
     res.atoms = chain_A.atoms + chain_B.atoms
     return res
