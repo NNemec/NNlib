@@ -16,7 +16,7 @@ param.createdefault("TRIOZON_CUTOFF", param.TRIOZON_A+5*param.TRIOZON_DELTA)
 param.createdefault("TRIOZON_Z_CUTOFF", (param.TRIOZON_CUTOFF**2 - (0.95*param.GRAPHITE_INTERLAYER_DISTANCE)**2)**0.5)
 
 class chain:
-    def __init__(self,H_int_B0,H_hop_B0,xyz_chain=None,):
+    def __init__(self,H_int_B0,H_hop_B0,xyz_chain=None,do_cache=True):
         assert type(H_int_B0) is type(Matrix(()))
         assert type(H_hop_B0) is type(Matrix(()))
         self.N_atoms = H_int_B0.shape[0]
@@ -35,7 +35,10 @@ class chain:
             self.bfield = array((0,0,0))
 
         self.energy = None
-        self.cache = {}
+        if do_cache:
+            self.cache = {}
+        (self._G_bulk,self._Gs_L,self._Gs_R) = (None,None,None)
+
 
     def set_bfield(self,bfield):
         import bfield as bf
@@ -48,18 +51,24 @@ class chain:
             else:
                 self.H_int = bf.calc_H_int(self.bfield,self.H_int_B0,self.xyz)
                 self.H_hop = bf.calc_H_hop(self.bfield,self.H_hop_B0,self.xyz,self.xyz_shifted)
-            self.cache = {}
+	    if hasattr(self,'cache'):
+        	self.cache = {}
+	    (self._G_bulk,self._Gs_L,self._Gs_R) = (None,None,None)
 
     def set_energy(self,energy):
         if energy is None:
             assert self.energy is not None
         else:
+	    if energy != self.energy:
+		(self._G_bulk,self._Gs_L,self._Gs_R) = (None,None,None) 
             self.energy = energy
-        if self.energy in self.cache:
-            (self._G_bulk,self._Gs_L,self._Gs_R) = self.cache[self.energy]
-        else:
-            self._do_calc_lopez_sancho()
-            self.cache[self.energy] = (self._G_bulk,self._Gs_L,self._Gs_R)
+	if self._G_bulk is None:
+	    if hasattr(self.cache) and self.energy in self.cache:
+        	(self._G_bulk,self._Gs_L,self._Gs_R) = self.cache[self.energy]
+	    else:
+                self._do_calc_lopez_sancho()
+                if hasattr(self.cache):
+                    self.cache[self.energy] = (self._G_bulk,self._Gs_L,self._Gs_R)
 
     def _do_calc_lopez_sancho(self):
         # ToDo: find documentation (Lopez-Sancho)
