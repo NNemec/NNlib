@@ -63,11 +63,11 @@ class chain:
 		(self._G_bulk,self._Gs_L,self._Gs_R) = (None,None,None) 
             self.energy = energy
 	if self._G_bulk is None:
-	    if hasattr(self.cache) and self.energy in self.cache:
+	    if hasattr(self,'cache') and self.energy in self.cache:
         	(self._G_bulk,self._Gs_L,self._Gs_R) = self.cache[self.energy]
 	    else:
                 self._do_calc_lopez_sancho()
-                if hasattr(self.cache):
+                if hasattr(self,'cache'):
                     self.cache[self.energy] = (self._G_bulk,self._Gs_L,self._Gs_R)
 
     def _do_calc_lopez_sancho(self):
@@ -157,7 +157,7 @@ class chain:
         H_hop[(N-1)*A:N*A,0:A] = self.H_hop_B0
         return chain(H_int,H_hop,xyz)
 
-def square_ladder(N,gamma):
+def square_ladder(N,gamma,do_cache=True):
     H_int = Matrix(zeros((N,N),'D'))
     H_hop = Matrix(zeros((N,N),'D'))
 
@@ -168,10 +168,10 @@ def square_ladder(N,gamma):
     for n in range(N):
         H_hop[n,n] = -gamma
 
-    return chain(H_int,H_hop)
+    return chain(H_int,H_hop,do_cache)
 
-def linchain(gamma):
-    return square_ladder(N=1,gamma=gamma)
+def linchain(gamma,do_cache=True):
+    return square_ladder(N=1,gamma=gamma,do_cache=do_cache)
 
 def _tight_binding_1stNN_graphene_H(xyz_chain):
     N = len(xyz_chain.atoms)
@@ -191,11 +191,11 @@ def _tight_binding_1stNN_graphene_H(xyz_chain):
                 H_hop[i,j] = -gamma
     return (H_int,H_hop,N)
 
-def tight_binding_1stNN_graphene(xyz_chain):
+def tight_binding_1stNN_graphene(xyz_chain,do_cache=True):
     (H_int,H_hop,N) = _tight_binding_1stNN_graphene_H(xyz_chain)
-    return chain(H_int,H_hop,xyz_chain,)
+    return chain(H_int,H_hop,xyz_chain,do_cache=do_cache)
 
-def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B):
+def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B,do_cache=True):
     # based on the parametrization described in
     # doi:10.1103/PhysRevB.64.121401
 
@@ -226,7 +226,7 @@ def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B):
             H_hop[a,N_A+b] = interwall_hopping(pos_a,pos_b_hop)
             H_hop[N_A+b,a] = interwall_hopping(pos_b,pos_a_hop)
 
-    return chain(H_int,H_hop,xyz_chain,)
+    return chain(H_int,H_hop,xyz_chain,do_cache)
 
 
 if __name__ == "__main__":
