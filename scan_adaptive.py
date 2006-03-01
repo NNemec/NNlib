@@ -1,22 +1,22 @@
 from calc import *
 
+set_printoptions(precision=2,linewidth=200)
+
 class scan_adaptive:
     def __init__(self,f,xgrid,periodic=False):
         self.f = f
         self.x = array(sorted(xgrid))
         assert len(self.x.shape) == 1
         assert self.x.shape[0] >= 2
-#        assert self.x.typecode in ('d','D','f','F')
+        assert isreal(self.x[0])
         y0 = array(f(self.x[0]))
-#        tc = y0.typecode
-#        assert tc in ('d','D','f','F')
         self.y = resize(y0,self.x.shape + y0.shape)
-#        self.y[0,...] = y0
+        self.y[0,...] = y0
         for i in range(1,len(self.x)):
             self.y[i,...] = array(self.f(self.x[i]))
         self.periodic = periodic
         if periodic:
-            assert self.y[0,...] == self.y[-1,...]
+            assert allclose(self.y[0,...], self.y[-1,...])
 
     def addpoints(self,newxpoints):
         newx = concatenate((self.x,newxpoints))
@@ -36,7 +36,7 @@ class scan_adaptive:
             newxpoints += list(n*self.x[:-1]/N + (N-n)*self.x[:-1]/N)
         self.addpoints(newxpoints)
 
-    def findextrema(self,):
+    def refine_extrema(self,):
         diff = self.y[1:,...] - self.y[:-1,...]
         flatpoints = sometrue(reshape(
             diff == 0,
@@ -54,26 +54,74 @@ class scan_adaptive:
         xsplit = (self.x[1:] + self.x[:-1]) / 2
         self.addpoints(compress(extrema[1:] | flatpoints | extrema[:-1],xsplit))
 
+    def refine_bends(self,maxquot=1.3):
+	assert maxquot > 1.0
+        y = reshape(
+            self.y,
+            (self.y.shape[0],prod(self.y.shape[1:])),
+        )
+	slope = (y[1:,:] - y[:-1,:]) / (self.x[1:,None] - self.x[:-1,None])
+	bend = slope[:-1,:] / slope[1:,:]
+		
+	issharp = ((bend < 1/maxquot) | (bend > maxquot) | isinf(bend)).any(1)
+	issharp_at_boundary = False
+	if self.periodic:
+	    bend_at_boundary = slope[-1,:] / slope[1,:]
+	    issharp_at_boundary = any((bend_at_boundary < 1/maxquot) | (bend_at_boundary > maxquot) | isinf(bend_at_boundary))
+        issharp = concatenate(([issharp_at_boundary],issharp,[issharp_at_boundary]))
+	xsplit = (self.x[1:] + self.x[:-1]) / 2
+
+        self.addpoints(compress(issharp[1:] | issharp[:-1],xsplit))
+	
+
+    def refine_sharp_bends_old(self,maxbend=None):
+        y = reshape(
+            self.y,
+            (self.y.shape[0],prod(self.y.shape[1:])),
+        )
+        diff = (y[1:,:] - y[:-1,:]) / (self.x[1:,None] - self.x[:-1,None])
+        diff2 = diff[1:,...] - diff[:-1,...]
+        maxdiff2 = amax(abs(diff2),axis=-1)
+        if maxbend is None:
+            maxbend = max(maxdiff2) / 10
+        print "maxbend ="
+        print maxbend
+        sharp_bends = maxdiff2 > maxbend
+
+        sharp_bend_at_boundary = False
+        if self.periodic:
+            sharp_bend_at_boundary = sometrue(ravel(abs(diff[0,...] - diff[-1,...]) > maxbend))
+        sharp_bends = concatenate(([sharp_bend_at_boundary],sharp_bends,[sharp_bend_at_boundary]))
+        xsplit = (self.x[1:] + self.x[:-1]) / 2
+
+        self.addpoints(compress(sharp_bends[1:] | sharp_bends[:-1],xsplit))
 
 
 
 if __name__ == '__main__':
-    import xyz,chain
-    from param import param
-    param.setdefaults()
-    x = xyz.armchair(3)
+    import cnt,chain
+    import units
+
+    N = 50
+    B = 200
+
+    x = cnt.armchair(N)
     ch = chain.tight_binding_1stNN_graphene(x)
+    ch.set_bfield([B * units.Tesla,0,0])
 
     def do_scan():
         scan = scan_adaptive(
-            ch.band_energies,
-            linspace(0,2*pi,50),
-            periodic = True,
+            lambda E: ch.band_energies(E)[2*N-10:2*N+10],
+            linspace(2*pi/3*0.9,2*pi/3*1.1,8),
+            periodic = False,
+#            periodic = True,
         )
 
 
         for i in range(10):
-            scan.findextrema()
+            scan.refine_bends(maxquot=2.0)
+	    print "Now at: %i points"%len(scan.x)
+#            scan.refine_extrema()
 
         globals()['scan'] = scan
 
