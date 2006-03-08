@@ -1,6 +1,5 @@
 from calc import *
 
-set_printoptions(precision=2,linewidth=200)
 
 class scan_adaptive:
     def __init__(self,f,xgrid,periodic=False):
@@ -19,6 +18,14 @@ class scan_adaptive:
             assert allclose(self.y[0,...], self.y[-1,...])
 
     def addpoints(self,newxpoints):
+        if self.periodic:
+            newxpoints = (newxpoints - self.x[0]) % (self.x[-1] - self.x[0]) + self.x[0]
+#	idx,newx = unique1d(concatenate((newxpoints,self.x)).round(),retindx=True)
+ #       newy = concatenate((zeros((len(newx),)+self.y.shape[1:]),self.y),axis=0)[idx]
+
+  #      resize(self.y,(len(newx),)+self.y.shape[1:])[idx]
+
+        newxpoints = unique(newxpoints)
         newx = concatenate((self.x,newxpoints))
         newy = resize(self.y,(len(newx),)+self.y.shape[1:])
         for i in range(len(self.x),len(newx)):
@@ -36,51 +43,139 @@ class scan_adaptive:
             newxpoints += list(n*self.x[:-1]/N + (N-n)*self.x[:-1]/N)
         self.addpoints(newxpoints)
 
-    def refine_extrema(self,):
+    def find_extrema(self,):
         diff = self.y[1:,...] - self.y[:-1,...]
-        flatpoints = sometrue(reshape(
-            diff == 0,
-            (diff.shape[0],prod(diff.shape[1:])),
-        ),axis=-1)
-        extrema = sometrue(reshape(
-            (diff[1:,...] * diff[:-1,...]) < 0,
-            (diff.shape[0]-1,prod(diff.shape[1:])),
-        ),axis=-1)
+        extrema = (diff[1:,...] * diff[:-1,...]) <= 0
+        extr_at_boundary = zeros(self.y.shape[1:],bool)
+        if self.periodic:
+            extr_at_boundary = (diff[0,...] * diff[-1,...]) < 0
+        extrema = concatenate(([extr_at_boundary],extrema,[extr_at_boundary]))
+        return extrema
+
+    def refine_extrema(self,):
+        y = reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
+        diff = y[1:,:] - y[:-1,:]
+        flatpoints = (diff == 0).any(1)
+        extrema = (diff[1:,:] * diff[:-1,:] < 0).any(1)
 
         extr_at_boundary = False
         if self.periodic:
-            extr_at_boundary = sometrue(ravel((diff[0,...] * diff[-1,...]) < 0))
-        extrema = concatenate(([extr_at_boundary],extrema > 0,[extr_at_boundary]))
+            extr_at_boundary = (diff[0,:] * diff[-1,:] < 0).any()
+        extrema = concatenate(([extr_at_boundary],extrema,[extr_at_boundary]))
         xsplit = (self.x[1:] + self.x[:-1]) / 2
         self.addpoints(compress(extrema[1:] | flatpoints | extrema[:-1],xsplit))
 
+    def refine_extrema_quad(self,):
+        x = self.x[:,None]
+        y = reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
+
+        if self.periodic:
+            x = concatenate((x,x[-1:,:]+(x[1:2,:]-x[0:1,:])),axis=0)
+#            x = concatenate((x[0:1,:]-(x[-1:,:]-x[-2:-1,:]),x,x[-1:,:]+(x[1:2,:]-x[0:1,:])),axis=0)
+            assert allclose(y[0,:], y[-1,:])
+            y = concatenate((y,y[1:2,:]),axis=0)
+#            y = concatenate((y[-2:-1,:],y,y[1:2,:]),axis=0)
+
+#        print x
+
+        xdiff = x[1:,:] - x[:-1,:]
+#        print xdiff
+        xdiff2 = x[2:,:] - x[:-2,:]
+        ydiff = y[1:,:] - y[:-1,:]
+        slope = ydiff / xdiff
+        off = (y[:-1,:]*x[1:,:] - y[1:,:]*x[:-1,:]) / xdiff[:,:]
+        assert allclose(slope * x[:-1,:] + off, y[:-1,:])
+        assert allclose(slope * x[1:,:] + off, y[1:,:])
+
+        slopediff = slope[1:,:] - slope[:-1,:]
+        curve = slopediff/xdiff2
+        xc = (off[:-1,:] - off[1:,:]  + x[:-2,:] * slope[1:,:] - x[2:,:] * slope[:-1,:]) / (2*slopediff)
+
+	# par(x) = curve * (x-xc)**2 + yc
+	# line1(x) = (x-x0)*y1/(x1-x0) + (x-x1)*y0/(x0-x1) = x*(y1-y0)/(x1-x0) + (y0*x1 - y1*x0)/(x1-x0)
+        #          = slope1 * x + off1
+	# line2(x) = (x-x1)*y2/(x2-x1) + (x-x2)*y1/(x1-x2) = x*(y2-y1)/(x2-x1) + (y1*x2 - y2*x1)/(x2-x1)
+        #          = slope2 * x + off2
+	# par(x) = (x-x0)*line2(x)/(x2-x0) + (x-x2)*line1(x)/(x0-x2)
+        #        = ((x-x0)*line2(x) - (x-x2)*line1(x))/(x2-x0)
+        #        = (slope2 * (x-x0)*(x+off2/slope2) - slope1*(x-x2)*(x+off1/slope1))/(x2-x0)
+        #        = ((slope2-slope1)*x**2 + (off2-x0*slope2 - off1+x2*slope1)*x + yc')/(x2-x0)
+        #        = (slope2-slope1)/(x2-x0) * (x + (off2-x0*slope2 - off1+x2*slope1)/(2*(slope2-slope1)))**2 + yc
+	#     curve = (slope2 - slope1)/(x2-x0)
+        #     xc = (off1 - off2 + x0*slope2 - x2*slope1)/(2*(slope2-slope1))
+        #     yc = y1-curve*(x1-xc)**2
+        #
+	# par(x1) = (x1-x0)*y1/(x2-x0) + (x1-x2)*y1/(x0-x2) = y1*1 ok
+
+        yc = y[1:-1,:] - curve * (x[1:-1,:] - xc)**2
+#        print curve * (x[:-2,:] - xc)**2 + yc
+#        print y[:-2,:]
+        assert allclose(curve * (x[:-2,:] - xc)**2 + yc, y[:-2,:])
+        assert allclose(curve * (x[2:,:] - xc)**2 + yc, y[2:,:])
+
+        extrema = (ydiff[1:,:] * ydiff[:-1,:] < 0) | ((ydiff[1:,:] == 0) ^ (ydiff[:-1,:] == 0))
+
+#        print (xc - x[:-2,:])[extrema]
+        assert all((xc - x[:-2,:] > 0)[extrema])
+#        print (x[2:,:] - xc)[extrema]
+        assert all((x[2:,:] - xc > 0)[extrema])
+
+        self.addpoints(xc[extrema])
+
     def refine_bends(self,maxquot=1.3):
-	assert maxquot > 1.0
-        y = reshape(
-            self.y,
-            (self.y.shape[0],prod(self.y.shape[1:])),
-        )
-	slope = (y[1:,:] - y[:-1,:]) / (self.x[1:,None] - self.x[:-1,None])
-	bend = slope[:-1,:] / slope[1:,:]
-		
-	issharp = ((bend < 1/maxquot) | (bend > maxquot) | isinf(bend)).any(1)
-	issharp_at_boundary = False
-	if self.periodic:
-	    bend_at_boundary = slope[-1,:] / slope[1,:]
-	    issharp_at_boundary = any((bend_at_boundary < 1/maxquot) | (bend_at_boundary > maxquot) | isinf(bend_at_boundary))
+        assert maxquot > 1.0
+        y = reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
+        diff = y[1:,:] - self.y[:-1,:]
+        slope = diff / (self.x[1:,None] - self.x[:-1,None])
+        bend = slope[:-1,:] / slope[1:,:]
+
+        issharp = ((bend < 1/maxquot) | (bend > maxquot) | isinf(bend)).any(1)
+        issharp_at_boundary = False
+        if self.periodic:
+            bend_at_boundary = slope[-1,:] / slope[1,:]
+            issharp_at_boundary = any((bend_at_boundary < 1/maxquot) | (bend_at_boundary > maxquot) | isinf(bend_at_boundary))
         issharp = concatenate(([issharp_at_boundary],issharp,[issharp_at_boundary]))
-	xsplit = (self.x[1:] + self.x[:-1]) / 2
+        xsplit = (self.x[1:] + self.x[:-1]) / 2
 
         self.addpoints(compress(issharp[1:] | issharp[:-1],xsplit))
-	
+
+    def refine_visible(self,maxangle=pi/100,xlims=None,ylims=None,xres=1e3,yres=1e2):
+        if xlims is None:
+            xmin = self.x[0]
+            xmax = self.x[-1]
+        else:
+            xmin,xmax = xlims
+        if ylims is None:
+            if hasattr(self,'ylims'):
+                ymin,ymax = self.ylims
+            else:
+                ymin = amin(self.y)
+                ymax = amax(self.y)
+                self.ylims = (ymin,ymax)
+        else:
+            xmin,xmax = xlims
+            self.ylims = ylims
+
+        y = reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
+
+        xdiff = self.x[1:] - self.x[:-1]
+        xdiff2 = self.x[2:] - self.x[:-2]
+
+        # linear interpolation: y1 = ((x1-x0)*y2 + (x2-x1)*y0)/(x2-x0)
+        y_interpolated = (xdiff[:-1,None]*y[2:,:] + xdiff[1:,None] * y[:-2,:]) / xdiff2[:,None]
+
+        yval_is_off = (abs(y_interpolated - y[1:-1,:]) > (ymax-ymin)/yres).any(1)
+        yval_is_off = concatenate(([False],yval_is_off,[False]))
+        xdiff_large_enough = xdiff > (xmax-xmin)/xres
+
+        xsplit = (self.x[1:] + self.x[:-1]) / 2
+
+        self.addpoints(compress((yval_is_off[1:] | yval_is_off[:-1]) & xdiff_large_enough,xsplit))
 
     def refine_sharp_bends_old(self,maxbend=None):
-        y = reshape(
-            self.y,
-            (self.y.shape[0],prod(self.y.shape[1:])),
-        )
+        y = reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
         diff = (y[1:,:] - y[:-1,:]) / (self.x[1:,None] - self.x[:-1,None])
-        diff2 = diff[1:,...] - diff[:-1,...]
+        diff2 = diff[1:,:] - diff[:-1,:]
         maxdiff2 = amax(abs(diff2),axis=-1)
         if maxbend is None:
             maxbend = max(maxdiff2) / 10
@@ -102,6 +197,8 @@ if __name__ == '__main__':
     import cnt,chain
     import units
 
+    set_printoptions(precision=2,linewidth=200)
+
     N = 50
     B = 200
 
@@ -120,7 +217,7 @@ if __name__ == '__main__':
 
         for i in range(10):
             scan.refine_bends(maxquot=2.0)
-	    print "Now at: %i points"%len(scan.x)
+            print "Now at: %i points"%len(scan.x)
 #            scan.refine_extrema()
 
         globals()['scan'] = scan
