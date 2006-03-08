@@ -1,7 +1,9 @@
 import os, sys
 import numpy
 from numpy import *
-from numpy.linalg import *
+import scipy.linalg
+from scipy.linalg import *
+#from numpy.linalg import *
 
 Matrix = numpy.matrix
 
@@ -24,8 +26,12 @@ def adj(X):
 def inv(X):
     return X.I # Matrix(numpy.linalg.inv(M))
 
-#def eigvals(X):
-#    return numpy.linalg.eigvals(X)
+def eigvals(X):
+#    print "eigvals:",
+#    X = asarray_chkfinite(X)
+#    geev, = scipy.linalg.lapack.get_lapack_funcs(('geev',),(X,))
+#    print geev.module_name
+    return scipy.linalg.eigvals(X)
 
 def integral(x,y):
     return .5*sum((x[1:]-x[:-1])*(y[1:]+y[:-1]))
