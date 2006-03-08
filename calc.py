@@ -1,6 +1,8 @@
 import os, sys
 import numpy
 from numpy import *
+import scipy
+import scipy.linalg
 from numpy.linalg import *
 
 Matrix = numpy.matrix
