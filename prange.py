@@ -11,6 +11,10 @@ def prange(N):
 	    yield i,pi
 	    i += 1
 
+def piter(list):
+    for i,p in prange(len(list)):
+	yield list[p]
+
 if __name__ == "__main__":
     for n,pn in prange(27):
 	print n,pn
