@@ -3,62 +3,63 @@ from data import *
 
 class scan_adaptive:
     def __init__(self,
-	f,
-	initial_xgrid=[],
-	period=None,
-	xlims=None,
-	ylims=None,
-	xminstep=None,
-	yminstep=None,
-	verbose=False,
-	sameyscale=False, # use the same y-scale for all values
-	masksensitive=None,
-	precision=1e-3,
+        f,
+        initial_xgrid=[],
+        period=None,
+        xlims=None,
+        ylims=None,
+        xminstep=None,
+        yminstep=None,
+        verbose=False,
+        sameyscale=False, # use the same y-scale for all values
+        masksensitive=None,
+        precision=1e-3,
     ):
-	self.verbose = verbose
+        self.verbose = verbose
         self.f = f
         self.period = period
         self.xlims = xlims
-	self.ylims = ylims
+        self.ylims = ylims
         self.xminstep = xminstep
         self.yminstep = yminstep
-	self.sameyscale = sameyscale
-	self.masksensitive = masksensitive
-	self.precision = precision
+        self.sameyscale = sameyscale
+        self.masksensitive = masksensitive
+        self.precision = precision
         self.x = array([],'d')
-        self.addpoints(initial_xgrid)
+        if len(initial_xgrid):
+            self.addpoints(initial_xgrid)
 
     def _initshape(self): # initialization after first value has been red
-	yshape = self.y.shape[1:]
-	if self.masksensitive is None:
-	    self.masksensitive = ones(yshape,bool)
-	else:
-	    self.masksensitive = asarray(self.masksensitive).ravel()
-	    assert masksensitive.shape == yshape
+        yshape = self.y.shape[1:]
+        if self.masksensitive is None:
+            self.masksensitive = ones(yshape,bool)
+        else:
+            self.masksensitive = asarray(self.masksensitive).ravel()
+            assert masksensitive.shape == yshape
         if self.ylims is not None:
-    	    self.ylims[0] = asarray(self.ylims[0]).ravel()
-    	    assert self.ylims[0].shape in [(1,),yshape]
-    	    self.ylims[1] = asarray(self.ylims[1]).ravel()
-    	    assert self.ylims[1].shape in [(1,),yshape]
-	if self.yminstep is not None:
-	    self.yminstep = asarray(self.minstep).ravel()
-    	    assert self.yminstep.shape in [(1,),yshape]
+            self.ylims[0] = asarray(self.ylims[0]).ravel()
+            assert self.ylims[0].shape in [(1,),yshape]
+            self.ylims[1] = asarray(self.ylims[1]).ravel()
+            assert self.ylims[1].shape in [(1,),yshape]
+        if self.yminstep is not None:
+            self.yminstep = asarray(self.minstep).ravel()
+            assert self.yminstep.shape in [(1,),yshape]
 
     def set_xlims(self,xlims):
-    	self.xlims = (xlims[0], xlims[1])
+        self.xlims = (xlims[0], xlims[1])
 
     def set_ylims(self,ylims):
-    	self.ylims = (asarray(ylims[0]).ravel(), asarray(ylims[1]).ravel())
+        self.ylims = (asarray(ylims[0]).ravel(), asarray(ylims[1]).ravel())
         assert self.ylims[0].shape in [(1,),self.y.shape[1:]]
         assert self.ylims[1].shape in [(1,),self.y.shape[1:]]
 
     def set_precision(self,precision):
-	self.precision = precision
-	
+        self.precision = precision
+
     def debugout(self,str):
-	if self.verbose:
-	    print str,
-	    sys.stdout.flush()
+        if self.verbose:
+            print str,
+            sys.stdout.flush()
 
 
     def store(self,h5group,gname):
@@ -66,22 +67,22 @@ class scan_adaptive:
             getattr(h5group,gname)._f_remove(recursive=True)
         g = pytables.Group(h5group,gname,new=True)
         pytables.Array(g,'x',self.x)
-	if self.y.shape[1] == 1:
-    	    pytables.Array(g,'y',self.y[:,0])
-	else:
-    	    pytables.Array(g,'y',self.y)
-	h5group._v_file.flush()
+        if self.y.shape[1] == 1:
+            pytables.Array(g,'y',self.y[:,0])
+        else:
+            pytables.Array(g,'y',self.y)
+        h5group._v_file.flush()
 
 
     def retrieve(self,h5group,gname,optional=False):
-	if not hasattr(h5group,gname):
-	    assert optional
-	    return
+        if not hasattr(h5group,gname):
+            assert optional
+            return
         self.x = getattr(h5group,gname).x[:]
         self.y = getattr(h5group,gname).y[:,...]
-	if len(self.y.shape) == 1:
-	    self.y = self.y[:,None]
-	self._initshape()
+        if len(self.y.shape) == 1:
+            self.y = self.y[:,None]
+        self._initshape()
 
 
     def interpolate_linear(self,xgrid):
@@ -92,49 +93,49 @@ class scan_adaptive:
             x = concatenate((x,x[:1]+self.period),axis=0)
             y = concatenate((y,y[:1,:]),axis=0)
 
-	xgrid = asarray(xgrid)
-	
-	assert all(xgrid <= x[-1])
-	assert all(xgrid >= x[0])
+        xgrid = asarray(xgrid)
 
-	segm_idx = x.searchsorted(xgrid)
-	if segm_idx[0] == 0:
-	    segm_idx[0] = 1
-	segm_idx -= 1
-	xdiff = x[1:] - x[:-1]
-	ydiff = y[1:] - y[:-1]
-	slope = ydiff/xdiff[:,None]
+        assert all(xgrid <= x[-1])
+        assert all(xgrid >= x[0])
+
+        segm_idx = x.searchsorted(xgrid)
+        if segm_idx[0] == 0:
+            segm_idx[0] = 1
+        segm_idx -= 1
+        xdiff = x[1:] - x[:-1]
+        ydiff = y[1:] - y[:-1]
+        slope = ydiff/xdiff[:,None]
         offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None]) / xdiff[:,None]
-	return slope[segm_idx] * xgrid[:,None] + offset[segm_idx]
+        return slope[segm_idx] * xgrid[:,None] + offset[segm_idx]
 
 
     def addpoints(self,newxpoints,xlims=None,xminstep=None,):
-	if xlims is None:
-	    xlims = self.xlims
-	if xminstep is None:
-	    xminstep = self.xminstep
-	    
+        if xlims is None:
+            xlims = self.xlims
+        if xminstep is None:
+            xminstep = self.xminstep
+
         newxpoints = asarray(newxpoints)
         assert len(newxpoints.shape) == 1
         if len(newxpoints) == 0:
-	    self.debugout("add no points.\n")
+            self.debugout("add no points.\n")
             return
-	self.debugout("addpoints: old=%i, new=%i, "%(len(self.x),len(newxpoints)))
+        self.debugout("addpoints: old=%i, new=%i, "%(len(self.x),len(newxpoints)))
 
         if self.period is not None:
             newxpoints = newxpoints % self.period
-	    if xlims is None:
-		xlims = (0.,self.period)
-	    else:
-		xlims = asarray(xlims) % self.period
+            if xlims is None:
+                xlims = (0.,self.period)
+            else:
+                xlims = asarray(xlims) % self.period
         if xlims is not None:
-	    oldcount = len(newxpoints)
-	    if xlims[0] >= xlims[1] and self.period is not None:
-	        newxpoints = newxpoints[(newxpoints >= xlims[0]) | (newxpoints <= xlims[1])]
-	    else:
-	        newxpoints = newxpoints[(newxpoints >= xlims[0]) & (newxpoints <= xlims[1])]
-	    if len(newxpoints) < oldcount:
-		self.debugout("outside of xlims: %i, "%(oldcount - len(newxpoints)))
+            oldcount = len(newxpoints)
+            if xlims[0] >= xlims[1] and self.period is not None:
+                newxpoints = newxpoints[(newxpoints >= xlims[0]) | (newxpoints <= xlims[1])]
+            else:
+                newxpoints = newxpoints[(newxpoints >= xlims[0]) & (newxpoints <= xlims[1])]
+            if len(newxpoints) < oldcount:
+                self.debugout("outside of xlims: %i, "%(oldcount - len(newxpoints)))
 
         if len(self.x) == 0:
             self.x = concatenate((self.x,[newxpoints[0]]))
@@ -142,36 +143,36 @@ class scan_adaptive:
             y0 = asarray(self.f(self.x[0])).ravel()
             self.y = resize(y0,self.x.shape + y0.shape)
             self.y[0,:] = y0
-	    self._initshape()
+            self._initshape()
 
         allx = concatenate((self.x,newxpoints))
-	if xminstep is None:
-	    if xlims is not None:
-		xminstep = (xlims[1] - xlims[0]) * self.precision
-	    else:
-		xminstep = (allx.max() - allx.min()) * self.precision
+        if xminstep is None:
+            if xlims is not None:
+                xminstep = (xlims[1] - xlims[0]) * self.precision
+            else:
+                xminstep = (allx.max() - allx.min()) * self.precision
 
         assert allx.dtype.char == 'd'
         allxrounded = (allx/xminstep).round()
-	self.debugout("duplicate in new: %i, "%(len(newxpoints) - len(unique(allxrounded[len(self.x):]))))
-	allxtosort = allxrounded + linspace(0,0.3,len(allxrounded))
+        self.debugout("duplicate in new: %i, "%(len(newxpoints) - len(unique(allxrounded[len(self.x):]))))
+        allxtosort = allxrounded + linspace(0,0.3,len(allxrounded))
         idxsorted = allxtosort.argsort()
         allxsorted = allxrounded[idxsorted]
-	idxisunique = concatenate(([True],(allxsorted[1:] != allxsorted[:-1])))
+        idxisunique = concatenate(([True],(allxsorted[1:] != allxsorted[:-1])))
         idxunique = idxsorted[idxisunique | (idxsorted<len(self.x))]
         idxisnew = idxunique >= len(self.x)
 
         self.x = allx[idxunique]
         self.y = resize(self.y,(len(allx),)+self.y.shape[1:])[idxunique]
-	doidx = nonzero(idxisnew)
-	if len(doidx) == 0:
-	    self.debugout("do=0, nothing to do.\n")
-	else:
-	    self.debugout("do=%i ... "%len(doidx))
-	    starttime = time()
-    	    for i in nonzero(idxisnew):
-        	self.y[i,...] = asarray(self.f(self.x[i])).ravel()
-	    self.debugout("done. (%g s/point)\n"%((time()-starttime)/len(nonzero(idxisnew))))
+        doidx = nonzero(idxisnew)
+        if len(doidx) == 0:
+            self.debugout("do=0, nothing to do.\n")
+        else:
+            self.debugout("do=%i ... "%len(doidx))
+            starttime = time()
+            for i in nonzero(idxisnew):
+                self.y[i,...] = asarray(self.f(self.x[i])).ravel()
+            self.debugout("done. (%g s/point)\n"%((time()-starttime)/len(nonzero(idxisnew))))
 
 
     def divide(self,
@@ -192,85 +193,85 @@ class scan_adaptive:
         diff = y[1:,:] - y[:-1,:]
         extrema = (diff[1:,:] * diff[:-1,:]) <= 0
         if self.period is None:
-	    extrema[0,:] = False
-	    extrema[-1,:] = False
+            extrema[0,:] = False
+            extrema[-1,:] = False
         return extrema
-	
+
 
     def refine_extrema(self,
-	xlims=None,
-	ylims=None,
-	xminstep=None,
-	yminstep=None,
-	minima=True,
-	maxima=True,
+        xlims=None,
+        ylims=None,
+        xminstep=None,
+        yminstep=None,
+        minima=True,
+        maxima=True,
     ):
-	self.debugout("refine extrema: ")
+        self.debugout("refine extrema: ")
         x = self.x[:]
         y = self.y[:,nonzero(self.masksensitive)]
 
         if ylims is None:
-	    ylims = self.ylims
-	if ylims is None:
-	    if self.sameyscale:
-		ylims = (asarray(y.ravel().min())[None],asarray(y.ravel().max())[None])
-	    else:
-		ylims = (y.min(axis=0),y.max(axis=0))
-	else:
-	    if not self.sameyscale:
-		ylims = (ylims[0][self.masksensitive],ylims[1][self.masksensitive])
+            ylims = self.ylims
+        if ylims is None:
+            if self.sameyscale:
+                ylims = (asarray(y.ravel().min())[None],asarray(y.ravel().max())[None])
+            else:
+                ylims = (y.min(axis=0),y.max(axis=0))
+        else:
+            if not self.sameyscale:
+                ylims = (ylims[0][self.masksensitive],ylims[1][self.masksensitive])
 
-	if yminstep is None:
-	    yminstep = self.yminstep
-	if yminstep is None:
-	    yminstep = (ylims[1] - ylims[0]) * self.precision
+        if yminstep is None:
+            yminstep = self.yminstep
+        if yminstep is None:
+            yminstep = (ylims[1] - ylims[0]) * self.precision
 
         if self.period is not None:
             x = concatenate((x,x[:2]+self.period),axis=0)
             y = concatenate((y,y[:2,:]),axis=0)
 
         diff = ((y[1:,:] - y[:-1,:])/yminstep).round()
-	if minima and maxima:
-    	    def is_extremum(diff0,diff1):
-		return (diff0 * diff1 < 0) # | ((diff0 == 0) ^ (diff1 == 0))
-	else:
-	    if minima:
-    		def is_extremum(diff0,diff1):
-		    return ((diff0 < 0) & (diff1 > 0)) # | ((diff0 < 0) & (diff1 >= 0))
-	    else:
-		assert maxima
-    		def is_extremum(diff0,diff1):
-		    return ((diff0 > 0) & (diff1 < 0)) # | ((diff0 > 0) & (diff1 <= 0))
-	
+        if minima and maxima:
+            def is_extremum(diff0,diff1):
+                return (diff0 * diff1 < 0) # | ((diff0 == 0) ^ (diff1 == 0))
+        else:
+            if minima:
+                def is_extremum(diff0,diff1):
+                    return ((diff0 < 0) & (diff1 > 0)) # | ((diff0 < 0) & (diff1 >= 0))
+            else:
+                assert maxima
+                def is_extremum(diff0,diff1):
+                    return ((diff0 > 0) & (diff1 < 0)) # | ((diff0 > 0) & (diff1 <= 0))
+
         extrema = zeros(y.shape,bool)
         extrema[1:-1,:] = is_extremum(diff[:-1,:],diff[1:,:])
-	if ylims is not None:
-	    extrema &= (y >= ylims[0])
-	    extrema &= (y <= ylims[1])
-	extrema = extrema.any(1)
-	
+        if ylims is not None:
+            extrema &= (y >= ylims[0])
+            extrema &= (y <= ylims[1])
+        extrema = extrema.any(1)
+
         xsplit = (x[1:] + x[:-1]) / 2
         self.addpoints(compress(extrema[1:] | extrema[:-1],xsplit),xlims=xlims,xminstep=xminstep)
 
     def roundoff_extrema(self,xminstep=None):
-	self.debugout("roundoff extrema: ")
+        self.debugout("roundoff extrema: ")
         xlims = self.xlims
-	if xlims is None:
-	    if self.period is None:
-		xlims = (x[0],x[-1])
-	    else:
-		xlims = (0,self.period)
-	if xminstep is None:
-	    xminstep is self.xminstep
-	if xminstep is None:
-	    xminstep = (xlims[1] - xlims[0]) * 1e-3
+        if xlims is None:
+            if self.period is None:
+                xlims = (x[0],x[-1])
+            else:
+                xlims = (0,self.period)
+        if xminstep is None:
+            xminstep is self.xminstep
+        if xminstep is None:
+            xminstep = (xlims[1] - xlims[0]) * 1e-3
 
-	x = self.x[self.find_extrema().any(1).nonzero()]
-	self.addpoints(concatenate([x-2*xminstep,x-xminstep,x+xminstep,x+2*xminstep]),xminstep=xminstep)
+        x = self.x[self.find_extrema().any(1).nonzero()]
+        self.addpoints(concatenate([x-2*xminstep,x-xminstep,x+xminstep,x+2*xminstep]),xminstep=xminstep)
 
 
     def refine_extrema_quad(self,):
-	self.debugout("refine extrema quadratically: ")
+        self.debugout("refine extrema quadratically: ")
         x = self.x[:,None]
         y = self.y[:,nonzero(self.masksensitive)]
 
@@ -283,7 +284,7 @@ class scan_adaptive:
         slope = ydiff / xdiff
         off = (y[:-1,:]*x[1:,:] - y[1:,:]*x[:-1,:]) / xdiff[:,:]
 
-	xdiff2 = x[2:,:] - x[:-2,:]
+        xdiff2 = x[2:,:] - x[:-2,:]
 
         assert allclose(slope * x[:-1,:] + off, y[:-1,:])
         assert allclose(slope * x[1:,:] + off, y[1:,:])
@@ -321,40 +322,40 @@ class scan_adaptive:
 
 
     def refine_visible(self,maxangle=pi/100,xlims=None,ylims=None,xminstep=None,yminstep=None):
-	self.debugout("refine visible: ")
+        self.debugout("refine visible: ")
         x = self.x
         y = self.y.reshape((self.y.shape[0],prod(self.y.shape[1:])))[:,nonzero(self.masksensitive.ravel())]
 #        y = self.y[:,self.masksensitive] # reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
 
-	xlims_arg = xlims
+        xlims_arg = xlims
         if xlims is None:
-	    xlims = self.xlims
-	if xlims is None:
-	    if self.period is None:
-		xlims = (x[0],x[-1])
-	    else:
-		xlims = (0,self.period)
-	    
-	if xminstep is None:
-	    xminstep is self.xminstep
-	if xminstep is None:
-	    xminstep = (xlims[1] - xlims[0]) * self.precision
+            xlims = self.xlims
+        if xlims is None:
+            if self.period is None:
+                xlims = (x[0],x[-1])
+            else:
+                xlims = (0,self.period)
+
+        if xminstep is None:
+            xminstep is self.xminstep
+        if xminstep is None:
+            xminstep = (xlims[1] - xlims[0]) * self.precision
 
         if ylims is None:
-	    ylims = self.ylims
-	if ylims is None:
-	    if self.sameyscale:
-		ylims = (asarray(y.ravel().min())[None],asarray(y.ravel().max())[None])
-	    else:
-		ylims = (y.min(axis=0),y.max(axis=0))
-	else:
-	    if not self.sameyscale:
-		ylims = (ylims[0][self.masksensitive],ylims[1][self.masksensitive])
+            ylims = self.ylims
+        if ylims is None:
+            if self.sameyscale:
+                ylims = (asarray(y.ravel().min())[None],asarray(y.ravel().max())[None])
+            else:
+                ylims = (y.min(axis=0),y.max(axis=0))
+        else:
+            if not self.sameyscale:
+                ylims = (ylims[0][self.masksensitive],ylims[1][self.masksensitive])
 
-	if yminstep is None:
-	    yminstep = self.yminstep
-	if yminstep is None:
-	    yminstep = (ylims[1] - ylims[0]) * self.precision * 10
+        if yminstep is None:
+            yminstep = self.yminstep
+        if yminstep is None:
+            yminstep = (ylims[1] - ylims[0]) * self.precision * 10
 
         if self.period is not None:
             x = concatenate((
@@ -370,36 +371,124 @@ class scan_adaptive:
 
         xdiff = x[1:] - x[:-1]
         xdiff2 = x[2:] - x[:-2]
+        ydiff = y[1:,:] - y[:-1,:]
+        slope = ydiff/xdiff[:,None]
+        offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None])/xdiff[:,None]
 
         # linear interpolation: y1 = ((x1-x0)*y2 + (x2-x1)*y0)/(x2-x0)
         y_interpolated = (xdiff[:-1,None]*y[2:,:] + xdiff[1:,None] * y[:-2,:]) / xdiff2[:,None]
-#	print "self.yminstep =",self.yminstep
-#	print "y_inter_err =",y_interpolated - y[1:-1,:]
+#       print "self.yminstep =",self.yminstep
+#       print "y_inter_err =",y_interpolated - y[1:-1,:]
         y_interpolated_is_off = (abs(y_interpolated - y[1:-1,:]) > yminstep)
 
-	slope = (y[1:,:] - y[:-1,:])/(x[1:,None] - x[:-1,None])
-	offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None])/(x[1:,None] - x[:-1,None])
-#	print y.shape, x.shape, slope.shape, offset.shape
-	y_left_extrapolated = x[:-2,None]*slope[1:,:] + offset[1:,:]
-	y_right_extrapolated = x[2:,None]*slope[:-1,:] + offset[:-1,:]
-#	print "y_left_err =",y_left_extrapolated - y[:-2,:]
-#	print "y_right_err =",y_right_extrapolated - y[2:,:]
+#       print y.shape, x.shape, slope.shape, offset.shape
+        y_left_extrapolated = x[:-2,None]*slope[1:,:] + offset[1:,:]
+        y_right_extrapolated = x[2:,None]*slope[:-1,:] + offset[:-1,:]
+#       print "y_left_err =",y_left_extrapolated - y[:-2,:]
+#       print "y_right_err =",y_right_extrapolated - y[2:,:]
 
-	select = zeros(xdiff.shape+y.shape[1:],bool)
-	select[:-1,:] |= y_interpolated_is_off
-	select[1:,:] |= y_interpolated_is_off
-#	print "select =",select
-	select[:-1,:] |= (abs(y_left_extrapolated - y[:-2,:]) > yminstep)
-	select[1:,:] |= (abs(y_right_extrapolated - y[2:,:]) > yminstep)
-#	print "select =",select
+        select = zeros(xdiff.shape+y.shape[1:],bool)
+        select[:-1,:] |= y_interpolated_is_off
+        select[1:,:] |= y_interpolated_is_off
+#       print "select =",select
+        select[:-1,:] |= (abs(y_left_extrapolated - y[:-2,:]) > yminstep)
+        select[1:,:] |= (abs(y_right_extrapolated - y[2:,:]) > yminstep)
+#       print "select =",select
 
-	select &= ((y[1:,:] >= ylims[0][None,:]) | (y[:-1,:] >= ylims[0][None,:])) 
-	select &= ((y[1:,:] <= ylims[1][None,:]) | (y[:-1,:] <= ylims[1][None,:])) 
+        select &= ((y[1:,:] >= ylims[0][None,:]) | (y[:-1,:] >= ylims[0][None,:]))
+        select &= ((y[1:,:] <= ylims[1][None,:]) | (y[:-1,:] <= ylims[1][None,:]))
 
         xsplit = (x[1:] + x[:-1]) / 2
 
         self.addpoints(compress(select.any(1),xsplit),xlims=xlims_arg)
 
+    def sort_crossing(self):
+        x = self.x
+        y = self.y
+
+        if self.period is not None:
+            x = concatenate((
+                x[-2:] - self.period,
+                x,
+            ))
+            y = concatenate((
+                y[-2:,:],
+                y,
+            ),axis=0)
+
+        xdiff = x[1:] - x[:-1]
+        ydiff = y[1:,:] - y[:-1,:]
+        slope = ydiff/xdiff[:,None]
+        offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None])/xdiff[:,None]
+
+        y_right_extrapolated = x[2:,None]*slope[:-1,:] + offset[:-1,:]
+        totalpermut = arange(y.shape[1])
+        for i in range(len(x)-2):
+            permut = argsort(y_right_extrapolated[i])
+            if any(permut[1:]<permut[:-1]):
+#               print "swapping at %i, x=%g: "%(i,x[i+1]),permut
+                # contains a swap
+                y[:i+2,:] = y[:i+2,permut]
+                if i+3<len(x):
+                    ydiff[i+1,:] = y[i+2,:] - y[i+1,:]
+#                ydiff[:i+1,:] = ydiff[:i+1,permut]
+                    slope[i+1,:] = ydiff[i+1,:]/xdiff[i+1,None]
+#                slope[:i+1,:] = slope[:i+1,permut]
+                    offset[i+1,:] = (y[i+1,:]*x[i+2,None] - y[i+2,:]*x[i+1,None])/xdiff[i+1,None]
+#                offset[:i+1,:] = offset[:i+1,permut]
+                    y_right_extrapolated[i+1,:] = x[i+3,None]*slope[i+1,:] + offset[i+1,:]
+                totalpermut = totalpermut[permut]
+
+        if self.period is not None:
+            x = x[2:]
+            y = y[2:,:]
+
+        self.totalpermut = totalpermut
+        self.y = y
+
+    def refine_crossing(self):
+        x = self.x
+        y = self.y
+
+        if self.period is not None:
+            x = concatenate((
+                x[-2:] - self.period,
+                x,
+            ))
+            y = concatenate((
+                y[-2:,:],
+                y,
+            ),axis=0)
+
+        xdiff = x[1:] - x[:-1]
+        ydiff = y[1:,:] - y[:-1,:]
+        slope = ydiff/xdiff[:,None]
+        offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None])/xdiff[:,None]
+
+        y_right_extrapolated = x[2:,None]*slope[:-1,:] + offset[:-1,:]
+        totalpermut = arange(y.shape[1])
+        for i in range(len(x)-2):
+            permut = argsort(y_right_extrapolated[i])
+            if any(permut[1:]<permut[:-1]):
+#               print "swapping at %i, x=%g: "%(i,x[i+1]),permut
+                # contains a swap
+                y[:i+2,:] = y[:i+2,permut]
+                if i+3<len(x):
+                    ydiff[i+1,:] = y[i+2,:] - y[i+1,:]
+#                ydiff[:i+1,:] = ydiff[:i+1,permut]
+                    slope[i+1,:] = ydiff[i+1,:]/xdiff[i+1,None]
+#                slope[:i+1,:] = slope[:i+1,permut]
+                    offset[i+1,:] = (y[i+1,:]*x[i+2,None] - y[i+2,:]*x[i+1,None])/xdiff[i+1,None]
+#                offset[:i+1,:] = offset[:i+1,permut]
+                    y_right_extrapolated[i+1,:] = x[i+3,None]*slope[i+1,:] + offset[i+1,:]
+                totalpermut = totalpermut[permut]
+
+        if self.period is not None:
+            x = x[2:]
+            y = y[2:,:]
+
+        self.totalpermut = totalpermut
+        self.y = y
 
 
 if False:
