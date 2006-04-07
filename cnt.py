@@ -180,6 +180,16 @@ def swcnt(V):
     else:
 	return chiral(V[0],V[1])
 
+def graphenestrip(M,N):
+    # create cnt coordinates
+    cnt = chiral(M,N)
+    # unroll the cnt
+    for a in cnt.atoms:
+	r = norm(a.pos[:2])
+	phi = atan2(a.pos[1],a.pos[0])
+	a.pos[0] = r*phi
+	a.pos[1] = 0
+    return cnt
 
 if __name__ == "__main__":
     if False:
