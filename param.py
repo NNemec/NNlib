@@ -80,15 +80,7 @@ class Param:
 param = Param()
 
 
-param.createdefault("GRAPHENE_CC_DISTANCE", 1.4226*angstrom)
-param.createdefault("GRAPHITE_INTERLAYER_DISTANCE", 3.44*angstrom)
-param.createdefault("GRAPHENE_1STNN_HOPPING", 2.66*eV)
+# param.createdefault("LATTICE_CONSTANT", param.GRAPHENE_CC_DISTANCE)
+# param.createdefault("HOPPING_CONSTANT", param.GRAPHENE_1STNN_HOPPING)
 
-param.createdefault("LATTICE_CONSTANT", param.GRAPHENE_CC_DISTANCE)
-param.createdefault("HOPPING_CONSTANT", param.GRAPHENE_1STNN_HOPPING)
 
-#        data.DO_CALC_CHANNELS", True
-#        data.NO_DISORDER_IN_CONTACTS", True
-
-param.createdefault("DISORDER_TYPE", "diagonal")
-#        data.DISORDER_TYPE", "hopping"

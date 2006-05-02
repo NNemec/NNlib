@@ -3,6 +3,12 @@ from calc import *
 from copy import deepcopy
 from param import param
 
+param.createdefault("DISORDER_TYPE", "diagonal")
+# param.DISORDER_TYPE = "hopping"
+
+param.createdefault("DO_CALC_CHANNELS", False)
+param.createdefault("NO_DISORDER_IN_CONTACTS", False)
+
 class conductor:
     def __init__(self,xyz,H_int,H_hop):
         N = [ len(x.atoms) for x in xyz ]
@@ -125,7 +131,7 @@ class conductor:
             if n>0:
                 E_H_hop.append(- self.H_hop[n-1])
         disorder_range = range(len(self.N))
-        if "NO_DISORDER_IN_CONTACTS" in param:
+        if param.NO_DISORDER_IN_CONTACTS:
             disorder_range = range(len(Sigma_0_L),len(self.N)-len(Sigma_0_R))
         for n in disorder_range:
             if self.disorder != 0:
@@ -192,7 +198,7 @@ class conductor:
         Gamma_L = 1j*(Sigma_L - adj(Sigma_L))
         Gamma_R = 1j*(Sigma_R - adj(Sigma_R))
         T = Gamma_L*G_eff_C*Gamma_R*adj(G_eff_C)
-        if "DO_CALC_CHANNELS" in param:
+        if param.DO_CALC_CHANNELS:
             transmission = sort(real(eigvals(T)))
             transmission = transmission[:-min(self.N)-1:-1]
         else:
