@@ -115,7 +115,7 @@ def chiral(M,N):
     multiple_perp = gcd((M+2*N),(2*M+N))
     M_perp = (M+2*N) / multiple_perp
     N_perp = -(2*M+N) / multiple_perp
-    period = CC_distance * sqrt(3.0) * sqrt(M_perp**2 + N_perp**2 + M_perp*N_perp);
+    period = c_[0,0,CC_distance * sqrt(3.0) * sqrt(M_perp**2 + N_perp**2 + M_perp*N_perp)]
     Nplaquettes = 2 * (M**2 + N**2 + M*N)/multiple_perp
     Natoms = Nplaquettes * 2
 
