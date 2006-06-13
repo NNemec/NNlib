@@ -64,13 +64,6 @@ def zigzag(N):
 
     return res
 
-def gcd(a,b):
-    if a>b:
-        a,b = b,a
-    while a != 0:
-        a,b = b%a,a
-    return b
-
 def is_metallic(M,N):
     assert M >= 0
     assert N >= 0
