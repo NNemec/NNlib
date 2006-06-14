@@ -352,15 +352,20 @@ class scan_adaptive:
             xminstep = (xlims[1] - xlims[0]) * self.precision
 
         if ylims is None:
+#	    print "!!1!!"
             ylims = self.ylims
         if ylims is None:
             if self.sameyscale:
+#    	        print "!!2!!"
                 ylims = (asarray(y.ravel().min())[None],asarray(y.ravel().max())[None])
             else:
+#    	        print "!!3!!"
                 ylims = (y.min(axis=0),y.max(axis=0))
         else:
             if not self.sameyscale:
+#    	        print "!!4!!"
                 ylims = (ylims[0][self.masksensitive],ylims[1][self.masksensitive])
+#	print "ylims = ", ylims
 
         if yminstep is None:
             yminstep = self.yminstep
@@ -387,26 +392,27 @@ class scan_adaptive:
 
         # linear interpolation: y1 = ((x1-x0)*y2 + (x2-x1)*y0)/(x2-x0)
         y_interpolated = (xdiff[:-1,None]*y[2:,:] + xdiff[1:,None] * y[:-2,:]) / xdiff2[:,None]
-#       print "self.yminstep =",self.yminstep
-#       print "y_inter_err =",y_interpolated - y[1:-1,:]
+#        print "self.yminstep =",self.yminstep
+#        print "y_inter_err =",y_interpolated - y[1:-1,:]
         y_interpolated_is_off = (abs(y_interpolated - y[1:-1,:]) > yminstep)
 
-#       print y.shape, x.shape, slope.shape, offset.shape
+#        print y.shape, x.shape, slope.shape, offset.shape
         y_left_extrapolated = x[:-2,None]*slope[1:,:] + offset[1:,:]
         y_right_extrapolated = x[2:,None]*slope[:-1,:] + offset[:-1,:]
-#       print "y_left_err =",y_left_extrapolated - y[:-2,:]
-#       print "y_right_err =",y_right_extrapolated - y[2:,:]
+#        print "y_left_err =",y_left_extrapolated - y[:-2,:]
+#        print "y_right_err =",y_right_extrapolated - y[2:,:]
 
         select = zeros(xdiff.shape+y.shape[1:],bool)
         select[:-1,:] |= y_interpolated_is_off
         select[1:,:] |= y_interpolated_is_off
-#       print "select =",select
+#        print "select =",select
         select[:-1,:] |= (abs(y_left_extrapolated - y[:-2,:]) > yminstep)
         select[1:,:] |= (abs(y_right_extrapolated - y[2:,:]) > yminstep)
-#       print "select =",select
+#        print "select =",select
 
         select &= ((y[1:,:] >= ylims[0][None,:]) | (y[:-1,:] >= ylims[0][None,:]))
         select &= ((y[1:,:] <= ylims[1][None,:]) | (y[:-1,:] <= ylims[1][None,:]))
+#        print "select =",select
 
         xsplit = (x[1:] + x[:-1]) / 2
 
