@@ -73,7 +73,7 @@ def square_ladder(N):
     spacing = param.GRAPHENE_CC_DISTANCE
     res = chain((0,0,spacing))
     for n in range(N):
-        res.atoms.append(atom('C',(spacing*n,0,0)))
+        res.atoms.append(atom('C',(spacing*(n-(N-1)*0.5),0,0)))
     return res
 
 def square_tube(N):
