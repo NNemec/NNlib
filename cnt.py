@@ -64,13 +64,6 @@ def zigzag(N):
 
     return res
 
-def gcd(a,b):
-    if a>b:
-        a,b = b,a
-    while a != 0:
-        a,b = b%a,a
-    return b
-
 def is_metallic(M,N):
     assert M >= 0
     assert N >= 0
@@ -115,7 +108,7 @@ def chiral(M,N):
     multiple_perp = gcd((M+2*N),(2*M+N))
     M_perp = (M+2*N) / multiple_perp
     N_perp = -(2*M+N) / multiple_perp
-    period = CC_distance * sqrt(3.0) * sqrt(M_perp**2 + N_perp**2 + M_perp*N_perp);
+    period = CC_distance * (3.0 * (M_perp**2 + N_perp**2 + M_perp*N_perp))**0.5
     Nplaquettes = 2 * (M**2 + N**2 + M*N)/multiple_perp
     Natoms = Nplaquettes * 2
 

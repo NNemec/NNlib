@@ -44,6 +44,29 @@ def calc_H_int(bfield,H_int_B0,xyz):
                 H_int[j,i] = conj(H_int[i,j])
     return H_int
 
+def calc_H_int_phasematrix(b0field,H_int_B0,xyz):
+    assert(shape(H_int_B0)[0] == len(xyz.atoms))
+    assert(shape(H_int_B0)[1] == len(xyz.atoms))
+
+    B0_e_hbar = _conv_bfield(b0field) * electron / hbar
+    assert not all(B0_e_hbar == 0)
+
+    phases = zeros(H_int_B0.shape,'d')
+    for i in range(len(xyz.atoms)):
+        for j in range(i+1,len(xyz.atoms)):
+            if H_int_B0[i,j] != 0:
+                pi = xyz.atoms[i].pos
+                pj = xyz.atoms[j].pos
+                mid_x = (pi[0] + pj[0])/2
+                mid_y = (pi[1] + pj[1])/2
+                diff_y = pj[1] - pi[1]
+                diff_z = pj[2] - pi[2]
+                A_e_hbar_y = B0_e_hbar[2]*mid_x
+                A_e_hbar_z = B0_e_hbar[0]*mid_y - B0_e_hbar[1]*mid_x
+                phases[i,j] = (A_e_hbar_y*diff_y + A_e_hbar_z*diff_z)
+		phases[j,i] = -phases[i,j]
+    return phases
+
 def calc_H_hop(bfield,H_hop_B0,xyz_0,xyz_1):
     assert(shape(H_hop_B0)[0] == len(xyz_0.atoms))
     assert(shape(H_hop_B0)[1] == len(xyz_1.atoms))

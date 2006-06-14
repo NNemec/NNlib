@@ -6,19 +6,19 @@ from plot import *
 def hsv_to_rgb(h, s, v):
 #    v=1,s=1,h=0 -> i=0 f=0 p=0 q=1 t=0 -> (1,0,0) red
 #	    h=1 -> i=1 (1,1,0)
-    print "h:",h
-    print "s:",s
-    print "v:",v
-    f = abs((h*6.0+1.0) % 2.0 - 1.0)
-    print "f:",f
+#    print "h:",h
+#    print "s:",s
+#    print "v:",v
+    f = abs(((h%1.0)*6.0+1.0) % 2.0 - 1.0)
+#    print "f:",f
 
     max_val = v*(1.0)
     mid_val = v*(1.0-s*(1.0-f))
     min_val = v*(1.0-s)
 
-    print "max_val:",max_val
-    print "mid_val:",mid_val
-    print "min_val:",min_val
+#    print "max_val:",max_val
+#    print "mid_val:",mid_val
+#    print "min_val:",min_val
 
     h = asarray(h)
 #    print "h:",h
@@ -26,9 +26,9 @@ def hsv_to_rgb(h, s, v):
     min_color = (h*3.0 + 2.0).astype(Int) % 3
     mid_color = 3 - (max_color + min_color)
     
-    print "max_color:",max_color
-    print "mid_color:",mid_color
-    print "min_color:",min_color
+#    print "max_color:",max_color
+#    print "mid_color:",mid_color
+#    print "min_color:",min_color
 
     rgb = zeros(mid_val.shape+(3,),'d')
 
@@ -39,6 +39,18 @@ def hsv_to_rgb(h, s, v):
 	)
 
     return rgb[...,0],rgb[...,1],rgb[...,2]
+
+def cpx_to_rgb(cpx):
+    Z = abs(cpx)
+    re = cpx.real / (Z+1e-5)
+    im = cpx.imag / (Z+1e-5)
+    
+    r =  0.5  * re +      0.0 * im + 0.5
+    g = -0.25 * re +  3**.5/4 * im + 0.5
+    b = -0.25 * re + -3**.5/4 * im + 0.5
+    
+    return r,g,b
+    
 
 class HSVColormap(matplotlib.colors.Colormap):
     def __init__(self):
