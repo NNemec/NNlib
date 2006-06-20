@@ -37,9 +37,8 @@ class scan_adaptive:
             self.masksensitive = asarray(self.masksensitive).ravel()
             assert masksensitive.shape == yshape
         if self.ylims is not None:
-            self.ylims[0] = asarray(self.ylims[0]).ravel()
+            self.ylims = (asarray(self.ylims[0]).ravel(),asarray(self.ylims[1]).ravel())
             assert self.ylims[0].shape in [(1,),yshape]
-            self.ylims[1] = asarray(self.ylims[1]).ravel()
             assert self.ylims[1].shape in [(1,),yshape]
         if self.yminstep is not None:
             self.yminstep = asarray(self.minstep).ravel()
@@ -66,20 +65,20 @@ class scan_adaptive:
         if hasattr(h5group,gname):
             getattr(h5group,gname)._f_remove(recursive=True)
         g = pytables.Group(h5group,gname,new=True)
-	filters = pytables.Filters(complevel=9, complib='zlib')
-	xatom = pytables.Float64Atom(shape=self.x.shape, flavor="numpy")
-	xdata = pytables.CArray(g,'x',shape=self.x.shape,atom=xatom,filters=filters)
-	xdata[:] = self.x[:]
+        filters = pytables.Filters(complevel=9, complib='zlib')
+        xatom = pytables.Float64Atom(shape=self.x.shape, flavor="numpy")
+        xdata = pytables.CArray(g,'x',shape=self.x.shape,atom=xatom,filters=filters)
+        xdata[:] = self.x[:]
 #        pytables.CArray(g,'x',self.x, filters=filters)
         if self.y.shape[1] == 1:
 #            pytables.CArray(g,'y',self.y[:,0], filters=filters)
-	    ydata = pytables.CArray(g,'y',shape=self.x.shape,atom=xatom,filters=filters)
-	    ydata[:] = self.y[:]
+            ydata = pytables.CArray(g,'y',shape=self.x.shape,atom=xatom,filters=filters)
+            ydata[:] = self.y[:]
         else:
-	    yatom = pytables.Float64Atom(shape=self.y.shape, flavor="numpy")
-#	    yatom = pytables.Float64Atom(shape=self.x.shape+(1,), flavor="numpy")
-	    ydata = pytables.CArray(g,'y',shape=self.y.shape,atom=yatom,filters=filters)
-	    ydata[:,:] = self.y[:,:]
+            yatom = pytables.Float64Atom(shape=self.y.shape, flavor="numpy")
+#           yatom = pytables.Float64Atom(shape=self.x.shape+(1,), flavor="numpy")
+            ydata = pytables.CArray(g,'y',shape=self.y.shape,atom=yatom,filters=filters)
+            ydata[:,:] = self.y[:,:]
 #            pytables.CArray(g,'y',self.y, filters=filters)
         h5group._v_file.flush()
 
@@ -411,6 +410,36 @@ class scan_adaptive:
         xsplit = (x[1:] + x[:-1]) / 2
 
         self.addpoints(compress(select.any(1),xsplit),xlims=xlims_arg)
+
+    def refine_valuecut(self,value,xminstep=None):
+        shifted = self.y - value
+        sgnchange = (shifted[1:,:] * shifted[:-1,:]) < 0
+        sel, = sgnchange.any(axis=1).nonzero()
+        x0 = self.x[sel][:,None]
+        x1 = self.x[sel+1][:,None]
+        y0 = self.y[sel,:]
+        y1 = self.y[sel+1,:]
+        cutx = x0 + (x1-x0)/(y1-y0) * (value - y0)
+        selcutx = cutx[sgnchange[sel,:]]
+        self.addpoints(selcutx,xminstep=xminstep)
+        if xminstep is not None:
+            self.addpoints(concatenate((selcutx + xminstep,selcutx - xminstep)),xminstep=xminstep)
+
+    def find_valuecut(self,value):
+        shifted = self.y - value
+        sgnchange = (shifted[1:,:] * shifted[:-1,:]) <= 0
+        sel, = sgnchange.any(axis=1).nonzero()
+        x0 = self.x[sel][:,None]
+        x1 = self.x[sel+1][:,None]
+        y0 = self.y[sel,:]
+        y1 = self.y[sel+1,:]
+        slope = (y1-y0)/(x1-x0)
+        cutx = x0 + (value - y0) / slope
+        selcutx = cutx[sgnchange[sel,:]]
+        selslope = slope[sgnchange[sel,:]]
+        selidx = sgnchange[sel,:].nonzero()[1]
+        return zip(selcutx,selidx,selslope)
+
 
     def sort_crossing(self):
         x = self.x
