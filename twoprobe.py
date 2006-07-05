@@ -31,7 +31,7 @@ class twoprobe:
             self.Sigma_R = None
 
     def set_bfield(self,bfield):
-        if self.bfield is None or bfield != self.bfield:
+        if self.bfield is None or any(bfield != self.bfield):
             self.bfield = bfield
             self.conductor.set_bfield(bfield)
             if 'BFIELD_IN_LEADS' in param:

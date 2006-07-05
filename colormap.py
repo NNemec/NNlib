@@ -113,6 +113,9 @@ class SmoothColormap(matplotlib.colors.Colormap):
             return tuple(rgba[0,:])
         else:
 	    return rgba
+	    
+    def is_gray(self):
+	return False
 
 
 if __name__ == '__main__':

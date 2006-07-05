@@ -178,13 +178,21 @@ def swcnt(V):
 
 def graphenestrip(M,N):
     # create cnt coordinates
-    cnt = chiral(M,N)
+    cnt = swcnt((M,N))
+    minx = Inf
+    maxx = -Inf
     # unroll the cnt
     for a in cnt.atoms:
 	r = norm(a.pos[:2])
-	phi = atan2(a.pos[1],a.pos[0])
+#	print a.pos
+	phi = atan2(a.pos[1],a.pos[0])%(2*pi)
+#	print phi
 	a.pos[0] = r*phi
+	minx = min(minx,a.pos[0])
+	maxx = max(maxx,a.pos[0])
 	a.pos[1] = 0
+    for a in cnt.atoms:
+	a.pos[0] -= (maxx+minx)*0.5
     return cnt
 
 if __name__ == "__main__":

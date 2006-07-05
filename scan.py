@@ -99,8 +99,8 @@ class scan_adaptive:
         y = self.y[:,:]
 
         if self.period is not None:
-            x = concatenate((x,x[:1]+self.period),axis=0)
-            y = concatenate((y,y[:1,:]),axis=0)
+            x = concatenate((x[-1:]-self.period,x,x[:1]+self.period),axis=0)
+            y = concatenate((y[-1:,:],y,y[:1,:]),axis=0)
 
         xgrid = asarray(xgrid)
 
@@ -431,9 +431,11 @@ class scan_adaptive:
         if xminstep is not None:
             self.addpoints(concatenate((selcutx + xminstep,selcutx - xminstep)),xminstep=xminstep)
 
-    def find_valuecut(self,value):
+    def find_valuecut(self,value,calccutx=True,calcidx=False,calcslope=False,calcslopesign=False):
         shifted = self.y - value
-        sgnchange = (shifted[1:,:] * shifted[:-1,:]) <= 0
+	sgnleft = sign(shifted[:-1,:])
+	sgnright = sign(shifted[1:,:])
+	sgnchange = (sgnright - sgnleft)/2.
         sel, = sgnchange.any(axis=1).nonzero()
         x0 = self.x[sel][:,None]
         x1 = self.x[sel+1][:,None]
@@ -441,10 +443,17 @@ class scan_adaptive:
         y1 = self.y[sel+1,:]
         slope = (y1-y0)/(x1-x0)
         cutx = x0 + (value - y0) / slope
-        selcutx = cutx[sgnchange[sel,:]]
-        selslope = slope[sgnchange[sel,:]]
-        selidx = sgnchange[sel,:].nonzero()[1]
-        return zip(selcutx,selidx,selslope)
+	res = []
+	if calccutx:
+    	    res += [cutx[sgnchange[sel,:]!=0]]
+	if calcidx:
+	    res += [sgnchange[sel,:].nonzero()[1]]
+	if calcslope:
+    	    res += [slope[sgnchange[sel,:]!=0]]
+	if calcslopesign:
+	    res += [sgnchange[sel,:][sgnchange[sel,:]!=0]]
+#        return zip(*res)
+        return res
 
 
     def sort_crossing(self):
