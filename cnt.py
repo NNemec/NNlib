@@ -85,6 +85,13 @@ def radius(M,N):
     circumference = CC_distance * sqrt(3.0) * sqrt(M**2 + N**2 + M*N)
     return circumference/(2*pi)
 
+def period(M,N):
+    CC_distance = param.GRAPHENE_CC_DISTANCE
+    multiple_perp = gcd((M+2*N),(2*M+N))
+    M_perp = (M+2*N) / multiple_perp
+    N_perp = -(2*M+N) / multiple_perp
+    return CC_distance * (3.0 * (M_perp**2 + N_perp**2 + M_perp*N_perp))**0.5
+
 def A_section(M,N):
     return radius(M,N)**2 * pi
 
