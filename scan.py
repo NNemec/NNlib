@@ -433,7 +433,7 @@ class scan_adaptive:
 
     def find_valuecut(self,value,calccutx=True,calcidx=False,calcslope=False,calcslopesign=False):
         x = self.x
-        y = self.y.reshape((self.y.shape[0],prod(self.y.shape[1:])))[:,nonzero(self.masksensitive.ravel())]
+        y = self.y
         if self.period is not None:
             x = concatenate((
                 x,
