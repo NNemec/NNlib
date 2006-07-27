@@ -432,6 +432,18 @@ class scan_adaptive:
             self.addpoints(concatenate((selcutx + xminstep,selcutx - xminstep)),xminstep=xminstep)
 
     def find_valuecut(self,value,calccutx=True,calcidx=False,calcslope=False,calcslopesign=False):
+        x = self.x
+        y = self.y.reshape((self.y.shape[0],prod(self.y.shape[1:])))[:,nonzero(self.masksensitive.ravel())]
+        if self.period is not None:
+            x = concatenate((
+                x,
+                x[:1] + self.period,
+            ))
+            y = concatenate((
+                y,
+                y[:1,:],
+            ),axis=0)
+	    
         shifted = self.y - value
 	sgnleft = sign(shifted[:-1,:])
 	sgnright = sign(shifted[1:,:])
