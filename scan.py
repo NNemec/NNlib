@@ -444,15 +444,15 @@ class scan_adaptive:
                 y[:1,:],
             ),axis=0)
 	    
-        shifted = self.y - value
+        shifted = y - value
 	sgnleft = sign(shifted[:-1,:])
 	sgnright = sign(shifted[1:,:])
 	sgnchange = (sgnright - sgnleft)/2.
         sel, = sgnchange.any(axis=1).nonzero()
-        x0 = self.x[sel][:,None]
-        x1 = self.x[sel+1][:,None]
-        y0 = self.y[sel,:]
-        y1 = self.y[sel+1,:]
+        x0 = x[sel][:,None]
+        x1 = x[sel+1][:,None]
+        y0 = y[sel,:]
+        y1 = y[sel+1,:]
         slope = (y1-y0)/(x1-x0)
         cutx = x0 + (value - y0) / slope
 	res = []
