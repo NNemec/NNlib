@@ -14,6 +14,7 @@ class scan_adaptive:
         sameyscale=False, # use the same y-scale for all values
         masksensitive=None,
         precision=1e-3,
+        randomize=0.0,
     ):
         self.verbose = verbose
         self.f = f
@@ -25,6 +26,7 @@ class scan_adaptive:
         self.sameyscale = sameyscale
         self.masksensitive = masksensitive
         self.precision = precision
+        self.randomize = randomize
         self.x = array([],'d')
         if len(initial_xgrid):
             self.addpoints(initial_xgrid)
@@ -260,6 +262,8 @@ class scan_adaptive:
         extrema = extrema.any(1)
 
         xsplit = (x[1:] + x[:-1]) / 2
+        if self.randomize != 0.0:
+            xsplit += (random(len(x)-1) - 0.5) * (x[1:] - x[:-1]) * self.randomize
         self.addpoints(compress(extrema[1:] | extrema[:-1],xsplit),xlims=xlims,xminstep=xminstep)
 
     def roundoff_extrema(self,xminstep=None):
@@ -351,20 +355,20 @@ class scan_adaptive:
             xminstep = (xlims[1] - xlims[0]) * self.precision
 
         if ylims is None:
-#	    print "!!1!!"
+#           print "!!1!!"
             ylims = self.ylims
         if ylims is None:
             if self.sameyscale:
-#    	        print "!!2!!"
+#               print "!!2!!"
                 ylims = (asarray(y.ravel().min())[None],asarray(y.ravel().max())[None])
             else:
-#    	        print "!!3!!"
+#               print "!!3!!"
                 ylims = (y.min(axis=0),y.max(axis=0))
         else:
             if not self.sameyscale:
-#    	        print "!!4!!"
+#               print "!!4!!"
                 ylims = (ylims[0][self.masksensitive],ylims[1][self.masksensitive])
-#	print "ylims = ", ylims
+#       print "ylims = ", ylims
 
         if yminstep is None:
             yminstep = self.yminstep
@@ -414,7 +418,8 @@ class scan_adaptive:
 #        print "select =",select
 
         xsplit = (x[1:] + x[:-1]) / 2
-
+        if self.randomize != 0.0:
+            xsplit += (random(len(x)-1) - 0.5) * (x[1:] - x[:-1]) * self.randomize
         self.addpoints(compress(select.any(1),xsplit),xlims=xlims_arg)
 
     def refine_valuecut(self,value,xminstep=None):
@@ -443,11 +448,11 @@ class scan_adaptive:
                 y,
                 y[:1,:],
             ),axis=0)
-	    
+
         shifted = y - value
-	sgnleft = sign(shifted[:-1,:])
-	sgnright = sign(shifted[1:,:])
-	sgnchange = (sgnright - sgnleft)/2.
+        sgnleft = sign(shifted[:-1,:])
+        sgnright = sign(shifted[1:,:])
+        sgnchange = (sgnright - sgnleft)/2.
         sel, = sgnchange.any(axis=1).nonzero()
         x0 = x[sel][:,None]
         x1 = x[sel+1][:,None]
@@ -455,15 +460,15 @@ class scan_adaptive:
         y1 = y[sel+1,:]
         slope = (y1-y0)/(x1-x0)
         cutx = x0 + (value - y0) / slope
-	res = []
-	if calccutx:
-    	    res += [cutx[sgnchange[sel,:]!=0]]
-	if calcidx:
-	    res += [sgnchange[sel,:].nonzero()[1]]
-	if calcslope:
-    	    res += [slope[sgnchange[sel,:]!=0]]
-	if calcslopesign:
-	    res += [sgnchange[sel,:][sgnchange[sel,:]!=0]]
+        res = []
+        if calccutx:
+            res += [cutx[sgnchange[sel,:]!=0]]
+        if calcidx:
+            res += [sgnchange[sel,:].nonzero()[1]]
+        if calcslope:
+            res += [slope[sgnchange[sel,:]!=0]]
+        if calcslopesign:
+            res += [sgnchange[sel,:][sgnchange[sel,:]!=0]]
 #        return zip(*res)
         return res
 
