@@ -73,6 +73,7 @@ def is_metallic(M,N):
     return ((M-N)%3 == 0)
 
 A_plaquette = a**2 * 3**.5 * 1.5
+v_F = 1.5*param.GRAPHENE_CC_DISTANCE*param.GRAPHENE_1STNN_HOPPING
 
 def radius(M,N):
     assert M >= 0
@@ -183,7 +184,7 @@ def swcnt(V):
     else:
 	return chiral(V[0],V[1])
 
-def graphenestrip(M,N):
+def grapheneribbon(M,N):
     # create cnt coordinates
     cnt = swcnt((M,N))
     minx = Inf
