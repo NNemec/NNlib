@@ -266,6 +266,67 @@ def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B,do_cache=True):
 
     return chain(H_int,H_hop,x,do_cache=do_cache)
 
+def tight_binding_graphite_triozon(xyz_tube_A,xyz_tube_B,do_cache=True):
+    # based on the parametrization described in
+    # doi:10.1103/PhysRevB.64.121401
+
+    CC_DIST = param.GRAPHENE_CC_DISTANCE
+    NN_HOP = param.GRAPHENE_1STNN_HOPPING
+
+    TRIO_CUTOFF = param.TRIOZON_CUTOFF
+    Z_CUTOFF = param.TRIOZON_Z_CUTOFF
+    BETA = param.TRIOZON_BETA
+    A = param.TRIOZON_A
+    DELTA = param.TRIOZON_DELTA
+
+    def hopping(pos_a,pos_b):
+        if abs(pos_a[2] - pos_b[2]) > Z_CUTOFF:
+            return 0.0
+        elif abs(pos_a[1]-pos_b[1]) < CC_DIST*0.1:
+            if norm(pos_a - pos_b) < CC_DIST*1.1:
+                return -NN_HOP
+        else:
+            d = norm(pos_b-pos_a);
+            if d < TRIO_CUTOFF:
+                return -BETA * exp((A - d)/DELTA);
+        return 0.0
+
+    x = xyz.merge(xyz_tube_A,xyz_tube_B)
+    at = x.atoms
+    period = x.period
+
+    Natoms = len(x.atoms)
+    H_int = Matrix(zeros((Natoms,Natoms),'D'))
+
+    for i in range(Natoms):
+        for j in range(i+1,Natoms):
+            hop = hopping(at[i].pos,at[j].pos)
+            if hop != 0.0:
+                H_int[i,j] = hop
+                H_int[j,i] = conj(hop)
+
+    H_hop = []
+    for n in range(20):
+#    for n in range(1+int(Z_CUTOFF/period[2])):
+#    for n in [0]:
+        x_shifted = x.shift(period*(n+1))
+        at_sh = x_shifted.atoms
+
+        h_hop = Matrix(zeros((Natoms,Natoms),'D'))
+        nonzero = False
+        for i in range(Natoms):
+            for j in range(Natoms):
+                hop = hopping(at[i].pos,at_sh[j].pos)
+                if hop != 0.0:
+                    nonzero = True
+                    h_hop[i,j] = hop
+        if nonzero:
+            H_hop.append(h_hop)
+        else:
+            break
+
+    return chain(H_int,H_hop,x,do_cache=do_cache)
+
 
 if __name__ == "__main__":
     import cnt
