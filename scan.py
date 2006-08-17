@@ -263,7 +263,7 @@ class scan_adaptive:
 
         xsplit = (x[1:] + x[:-1]) / 2
         if self.randomize != 0.0:
-            xsplit += (random(len(x)-1) - 0.5) * (x[1:] - x[:-1]) * self.randomize
+            xsplit += (rand(len(x)-1) - 0.5) * (x[1:] - x[:-1]) * self.randomize
         self.addpoints(compress(extrema[1:] | extrema[:-1],xsplit),xlims=xlims,xminstep=xminstep)
 
     def roundoff_extrema(self,xminstep=None):
@@ -419,7 +419,7 @@ class scan_adaptive:
 
         xsplit = (x[1:] + x[:-1]) / 2
         if self.randomize != 0.0:
-            xsplit += (random(len(x)-1) - 0.5) * (x[1:] - x[:-1]) * self.randomize
+            xsplit += (rand(len(x)-1) - 0.5) * (x[1:] - x[:-1]) * self.randomize
         self.addpoints(compress(select.any(1),xsplit),xlims=xlims_arg)
 
     def refine_valuecut(self,value,xminstep=None):
