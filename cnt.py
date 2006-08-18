@@ -37,11 +37,11 @@ def armchair(N):
     res.radius = r
     for n in range(N):
         res.atoms.extend([
-	    xyz.atom('C',(r*cos(2*pi*(6*n  )/(6*N)),r*sin(2*pi*(6*n  )/(6*N)),period/2)),
-	    xyz.atom('C',(r*cos(2*pi*(6*n+1)/(6*N)),r*sin(2*pi*(6*n+1)/(6*N)),0)),
-	    xyz.atom('C',(r*cos(2*pi*(6*n+3)/(6*N)),r*sin(2*pi*(6*n+3)/(6*N)),0)),
-	    xyz.atom('C',(r*cos(2*pi*(6*n+4)/(6*N)),r*sin(2*pi*(6*n+4)/(6*N)),period/2)),
-	])
+            xyz.atom('C',(r*cos(2*pi*(6*n  )/(6*N)),r*sin(2*pi*(6*n  )/(6*N)),period/2)),
+            xyz.atom('C',(r*cos(2*pi*(6*n+1)/(6*N)),r*sin(2*pi*(6*n+1)/(6*N)),0)),
+            xyz.atom('C',(r*cos(2*pi*(6*n+3)/(6*N)),r*sin(2*pi*(6*n+3)/(6*N)),0)),
+            xyz.atom('C',(r*cos(2*pi*(6*n+4)/(6*N)),r*sin(2*pi*(6*n+4)/(6*N)),period/2)),
+        ])
 
     return res
 
@@ -56,11 +56,11 @@ def zigzag(N):
     res.radius = r
     for n in range(N):
         res.atoms.extend([
-    	    xyz.atom('C',(r*cos(2*pi*(2*n  )/(2*N)),r*sin(2*pi*(2*n  )/(2*N)),period/6)),
-    	    xyz.atom('C',(r*cos(2*pi*(2*n  )/(2*N)),r*sin(2*pi*(2*n  )/(2*N)),period/2)),
-    	    xyz.atom('C',(r*cos(2*pi*(2*n+1)/(2*N)),r*sin(2*pi*(2*n+1)/(2*N)),0)),
-    	    xyz.atom('C',(r*cos(2*pi*(2*n+1)/(2*N)),r*sin(2*pi*(2*n+1)/(2*N)),period/1.5)),
-	])
+            xyz.atom('C',(r*cos(2*pi*(2*n  )/(2*N)),r*sin(2*pi*(2*n  )/(2*N)),period/6)),
+            xyz.atom('C',(r*cos(2*pi*(2*n  )/(2*N)),r*sin(2*pi*(2*n  )/(2*N)),period/2)),
+            xyz.atom('C',(r*cos(2*pi*(2*n+1)/(2*N)),r*sin(2*pi*(2*n+1)/(2*N)),0)),
+            xyz.atom('C',(r*cos(2*pi*(2*n+1)/(2*N)),r*sin(2*pi*(2*n+1)/(2*N)),period/1.5)),
+        ])
 
     return res
 
@@ -165,9 +165,9 @@ def chiral(M,N):
                 phi_B = phi_A + (dphi_a+dphi_b)/3
                 z_B = z_A + (dz_a+dz_b)/3
                 res.atoms.extend([
-		    xyz.atom('C',(cos(phi_A)*r,sin(phi_A)*r,z_A)),
-		    xyz.atom('C',(cos(phi_B)*r,sin(phi_B)*r,z_B)),
-		])
+                    xyz.atom('C',(cos(phi_A)*r,sin(phi_A)*r,z_A)),
+                    xyz.atom('C',(cos(phi_B)*r,sin(phi_B)*r,z_B)),
+                ])
     assert len(res.atoms) == Natoms
 
     return res
@@ -182,7 +182,7 @@ def swcnt(V):
     elif V[0] == 0:
         return zigzag(V[1])
     else:
-	return chiral(V[0],V[1])
+        return chiral(V[0],V[1])
 
 def grapheneribbon(M,N):
     # create cnt coordinates
@@ -191,17 +191,26 @@ def grapheneribbon(M,N):
     maxx = -Inf
     # unroll the cnt
     for a in cnt.atoms:
-	r = norm(a.pos[:2])
-#	print a.pos
-	phi = atan2(a.pos[1],a.pos[0])%(2*pi)
-#	print phi
-	a.pos[0] = r*phi
-	minx = min(minx,a.pos[0])
-	maxx = max(maxx,a.pos[0])
-	a.pos[1] = 0
+        r = norm(a.pos[:2])
+#       print a.pos
+        phi = atan2(a.pos[1],a.pos[0])%(2*pi)
+#       print phi
+        a.pos[0] = r*phi
+        minx = min(minx,a.pos[0])
+        maxx = max(maxx,a.pos[0])
+        a.pos[1] = 0
     for a in cnt.atoms:
-	a.pos[0] -= (maxx+minx)*0.5
+        a.pos[0] -= (maxx+minx)*0.5
     return cnt
+
+def graphene():
+    dCC = param.GRAPHENE_CC_DISTANCE
+    res = xyz.sheet([[.75**.5*dCC,1.5*dCC,0],[-.75**.5*dCC,1.5*dCC,0]])
+    res.atoms.extend([
+        xyz.atom('C',(0.,.5*dCC,0.)),
+        xyz.atom('C',(0.,-.5*dCC,0.)),
+    ])
+    return res
 
 if __name__ == "__main__":
     if False:

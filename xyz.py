@@ -69,6 +69,30 @@ class chain(structure):
                 res.atoms.append(atom.shift(n*self.period))
         return res
 
+class sheet(structure):
+    def __init__(self,period):
+        structure.__init__(self)
+        assert len(period) == 2
+        a = [asarray(period[0]),asarray(period[1])]
+        assert a[0].shape == (3,)
+        assert a[1].shape == (3,)
+        self.period = a
+        ez = [0,0,1]
+        spade = dot(a[0],cross(a[1],ez))
+        assert spade != 0.
+        self.rzp = [
+            cross(a[1],ez) / spade,
+            cross(ez,a[0]) / spade,
+        ]
+
+    def multiply(self,N0,N1):
+        res = sheet([N0*self.period[0],N1*self.period[1]])
+        for n0 in range(N0):
+            for n1 in range(N1):
+                for atom in self.atoms:
+                    res.atoms.append(atom.shift(n0*self.period[0] + n1*self.period[1]))
+        return res
+
 def square_ladder(N):
     spacing = param.GRAPHENE_CC_DISTANCE
     res = chain((0,0,spacing))
@@ -81,17 +105,25 @@ def square_tube(N):
     radius = N*spacing/(2*pi)
     res = chain((0,0,spacing))
     for n in range(N):
-	phi = 2*pi*n/N
-	res.atoms.append(atom('C',(cos(phi)*radius,sin(phi)*radius,0)))
+        phi = 2*pi*n/N
+        res.atoms.append(atom('C',(cos(phi)*radius,sin(phi)*radius,0)))
     return res
 
 def linchain():
     return square_ladder(1)
 
-def merge(chain_A,chain_B):
-    assert((chain_A.period == chain_B.period).all())
-    res = chain(chain_A.period)
-    res.atoms = chain_A.atoms + chain_B.atoms
+def merge(xyz_A,xyz_B):
+    if isinstance(xyz_A,chain):
+        assert isinstance(xyz_B,chain)
+        assert((xyz_A.period == xyz_B.period).all())
+        res = chain(xyz_A.period)
+        res.atoms = xyz_A.atoms + xyz_B.atoms
+    elif isinstance(xyz_A,sheet):
+        assert isinstance(xyz_B,sheet)
+        assert((xyz_A.period[0] == xyz_B.period[0]).all())
+        assert((xyz_A.period[1] == xyz_B.period[1]).all())
+        res = sheet(xyz_A.period)
+        res.atoms = xyz_A.atoms + xyz_B.atoms
     return res
 
 class aperiodic:
@@ -140,7 +172,6 @@ class aperiodic:
                 for at,chg in zip(c.atoms,ch):
                     print >> f, at.typ + "\t%f\t%f\t%f"%(tuple(at.pos)) + "\t%g"%chg
         f.close()
-
 
 if __name__ == "__main__":
     param.setdefaults
