@@ -70,7 +70,7 @@ class HSVColormap(matplotlib.colors.Colormap):
 
 	r,g,b = hsv_to_rgb(xa,xa,xa)
 	
-        rgba = zeros(xa.shape+(4,), Float)
+        rgba = zeros(xa.shape+(4,), float)
         rgba[...,0] = r
         rgba[...,1] = g
         rgba[...,2] = b
@@ -105,7 +105,7 @@ class SmoothColormap(matplotlib.colors.Colormap):
 
 	rgb = (1.0 - (xa[...,None])*(1.0-bc[...,:]))*(1.0 - xa[...,None])
 
-        rgba = zeros(xa.shape+(4,), Float)
+        rgba = zeros(xa.shape+(4,), float)
         rgba[...,0:3] = rgb
         rgba[...,3] = alpha
 

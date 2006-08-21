@@ -5,6 +5,7 @@ from numpy import *
 #import scipy.linalg
 #from scipy.linalg import *
 from numpy.linalg import *
+from numpy.random import *
 
 Matrix = numpy.matrix
 
