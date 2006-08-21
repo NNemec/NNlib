@@ -33,6 +33,7 @@ class sheet:
             self.xyz_shifted = None
             self.bfield = array((0,0,0))
             self.area = cross(self.xyz.period[0],self.xyz.period[1])[2]
+            self.phase = None
 
 
 
@@ -63,7 +64,7 @@ class sheet:
                 assert self.xyz.period[0][2] == 0.
                 assert self.xyz.period[1][2] == 0.
 
-                def phase(s,d,Nflux):
+                def phase(s,d,):#Nflux):
                     # linear gauge:
                     # phase = (d[1] - s[1]) * (d[0] + s[0]) * .5
 #                   print s,d,
@@ -90,24 +91,41 @@ class sheet:
 
 #                   print phase
 
-                    return exp(1j*2*pi*phase*Nflux)
+                    return phase
+
+#                    return exp(1j*2*pi*phase*Nflux)
+
+
+                if self.phase is None:
+                    self.phase = {}
+
+                    for i0,i1 in self.H:
+                        self.phase[i0,i1] = zeros(self.H[i0,i1].shape)
+
+                        for n,m in array(asarray(self.H[i0,i1]).nonzero()).transpose():
+                            pos = self.xyz.atoms[n].pos
+                            rs = [ dot(pos,self.xyz.rzp[0]) , dot(pos,self.xyz.rzp[1]) ]
+                            pos_shifted = self.xyz_shifted[i0,i1].atoms[m].pos
+                            rd = [ dot(pos_shifted,self.xyz.rzp[0]) , dot(pos_shifted,self.xyz.rzp[1]) ]
+
+                            self.phase[i0,i1][n,m] = phase(rs,rd)
 
                 for i0,i1 in self.H:
-#                   print (i0,i1)
-#                   print self.H[i0,i1].nonzero()
+#                   H = asarray(self.H[i0,i1])
+#                   H[H.nonzero()] *= exp(1j*2*pi*self.phase[i0,i1][H.nonzero()]*Nflux)
+#                   self.H[i0,i1] = asmatrix(H)
+
+#                   self.H[i0,i1] = asmatrix(asarray(self.H[i0,i1]) * exp(1j*2*pi*self.phase[i0,i1]*Nflux))
+
                     for n,m in array(asarray(self.H[i0,i1]).nonzero()).transpose():
+                        self.H[i0,i1][n,m] *= exp(1j*2*pi*self.phase[i0,i1][n,m]*Nflux)
 
-#                    for n in range(self.N_atoms):
-                        pos = None
-#                        for m in range(self.N_atoms):
-#                            if self.H[i0,i1][n,m] != 0.0:
-#                       if pos is None:
-                        pos = self.xyz.atoms[n].pos
-                        rs = [ dot(pos,self.xyz.rzp[0]) , dot(pos,self.xyz.rzp[1]) ]
-                        pos_shifted = self.xyz_shifted[i0,i1].atoms[m].pos
-                        rd = [ dot(pos_shifted,self.xyz.rzp[0]) , dot(pos_shifted,self.xyz.rzp[1]) ]
-
-                        self.H[i0,i1][n,m] *= phase(rs,rd,Nflux)
+#                        pos = self.xyz.atoms[n].pos
+#                        rs = [ dot(pos,self.xyz.rzp[0]) , dot(pos,self.xyz.rzp[1]) ]
+#                        pos_shifted = self.xyz_shifted[i0,i1].atoms[m].pos
+#                        rd = [ dot(pos_shifted,self.xyz.rzp[0]) , dot(pos_shifted,self.xyz.rzp[1]) ]
+#
+#                        self.H[i0,i1][n,m] *= phase(rs,rd,Nflux)
 #                   print
 
     def H_eff(self,ka):
