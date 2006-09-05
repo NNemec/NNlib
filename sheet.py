@@ -224,6 +224,7 @@ def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
     BETA = param.TRIOZON_BETA
     A = param.TRIOZON_A
     DELTA = param.TRIOZON_DELTA
+#    print "CUTOFF: ",TRIO_CUTOFF
 
     def hopping(pos_a,pos_b):
 #        if abs(pos_a[2] - pos_b[2]) > Z_CUTOFF:
@@ -234,7 +235,7 @@ def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
         else:
             d = norm(pos_b-pos_a);
             if d < TRIO_CUTOFF:
-                return -BETA * exp((A - d)/DELTA);
+                return -BETA * exp((A - d)/DELTA)
         return 0.0
 
     x = xyz.merge(xyz_sheet_A,xyz_sheet_B)
@@ -252,11 +253,11 @@ def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
                 H[0,0][i,j] = hop
                 H[0,0][j,i] = conj(hop)
 
-    for i0 in range(5):
-        for i1 in range(-5,5):
+    for i0 in range(6):
+        for i1 in range(-6,6):
             shift = i0 * period[0] + i1 * period[1]
-            if norm(shift) > Z_CUTOFF + norm(period[0]) + norm(period[1]):
-                continue
+#            if norm(shift) > Z_CUTOFF + norm(period[0]) + norm(period[1]):
+#                continue
             if i0 == 0 and i1 <= 0:
                 continue
             h_hop = Matrix(zeros((Natoms,Natoms),'D'))
@@ -272,6 +273,7 @@ def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
                         h_hop[i,j] = hop
                         nonzero = True
             if nonzero:
+		assert norm(shift) <= Z_CUTOFF + norm(period[0]) + norm(period[1])
                 H[i0,i1] = h_hop
 
     return sheet(H,x)
