@@ -58,3 +58,12 @@ def gcd(a,b):
 
 def lcm(a,b):
     return a*b/gcd(a,b)
+
+class timer:
+    def __init__(self,msg):
+        print "%s..."%msg,
+        sys.stdout.flush()
+        self.starttime = time()
+
+    def stop(self):
+        print " %g s"%(time()-self.starttime)

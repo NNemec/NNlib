@@ -30,7 +30,7 @@ class sheet:
             assert isinstance(xyz_sheet,xyz.sheet)
             assert len(xyz_sheet.atoms) == self.N_atoms
             self.xyz = xyz_sheet
-            self.xyz_shifted = None
+            self.latticecoords = None
             self.bfield = array((0,0,0))
             self.area = cross(self.xyz.period[0],self.xyz.period[1])[2]
             self.phase = None
@@ -54,46 +54,48 @@ class sheet:
             if sum(array(bfield)**2) == 0:
                 self.H = self.H_B0
             else:
-                if self.xyz_shifted is None:
-                    self.xyz_shifted = {}
-                    for i0,i1 in self.H_B0:
-                        self.xyz_shifted[i0,i1] = self.xyz.shift(i0 * self.xyz.period[0] + i1 * self.xyz.period[1])
+                if self.latticecoords is None:
+		    self.latticecoords = [ (dot(at.pos,self.xyz.rzp[0]) , dot(at.pos,self.xyz.rzp[1]) ) for at in self.xyz.atoms ]
 
                 self.H = deepcopy(self.H_B0)
                 assert all(bfield[:2] == 0.) # bfield perpendicular to sheet
                 assert self.xyz.period[0][2] == 0.
                 assert self.xyz.period[1][2] == 0.
 
-                def phase(s,d,):#Nflux):
+                def phase(s,d,shift):
                     # linear gauge:
                     # phase = (d[1] - s[1]) * (d[0] + s[0]) * .5
-#                   print s,d,
-                    sx,sy = s
-                    dx,dy = d
+
+		    shiftx,shifty = shift
+
+		    si = int(s[0] // 1)
+		    sr = s[0] % 1
+		    sx = si+sr
+		    sy = s[1]
+		    di = int(d[0] // 1) + shiftx
+		    dr = d[0] % 1
+		    dx = di+dr
+		    dy = d[1] + shifty
 
                     # forced gauge:
                     if dx == sx:
-                        phase = (dy - sy) * (dx%1)
+                        phase = (dy - sy) * (dr)
 
                     else:
-                        Aavg = ( (dx // 1 - sx // 1) * .5 + (dx % 1 - sx % 1) * (dx % 1 + sx % 1) * .5 ) / (dx - sx)
+                        Aavg = ( (di - si) * .5 + (dr - sr) * (dr + sr) * .5 ) / (dx - sx)
                         phase = (dy - sy) * Aavg
-                        if dx > sx:
-                            for i in range(int(sx//1),int(dx//1)):
+                        if di > si:
+                            for i in range(si,di):
                                 x = i+1
                                 y = x * (dy-sy)/(dx-sx) + (dx*sy-sx*dy)/(dx-sx)
-                                phase -= y%1
-                        else:
-                            for i in range(int(dx//1),int(sx//1)):
+                                phase -= y
+                        elif di < si:
+                            for i in range(di,si):
                                 x = i+1
                                 y = x * (dy-sy)/(dx-sx) + (dx*sy-sx*dy)/(dx-sx)
-                                phase += y%1
+                                phase += y
 
-#                   print phase
-
-                    return phase
-
-#                    return exp(1j*2*pi*phase*Nflux)
+                    return phase%1
 
 
                 if self.phase is None:
@@ -103,30 +105,12 @@ class sheet:
                         self.phase[i0,i1] = zeros(self.H[i0,i1].shape)
 
                         for n,m in array(asarray(self.H[i0,i1]).nonzero()).transpose():
-                            pos = self.xyz.atoms[n].pos
-                            rs = [ dot(pos,self.xyz.rzp[0]) , dot(pos,self.xyz.rzp[1]) ]
-                            pos_shifted = self.xyz_shifted[i0,i1].atoms[m].pos
-                            rd = [ dot(pos_shifted,self.xyz.rzp[0]) , dot(pos_shifted,self.xyz.rzp[1]) ]
-
-                            self.phase[i0,i1][n,m] = phase(rs,rd)
+                            self.phase[i0,i1][n,m] = phase(self.latticecoords[n],self.latticecoords[m],(i0,i1))
 
                 for i0,i1 in self.H:
-#                   H = asarray(self.H[i0,i1])
-#                   H[H.nonzero()] *= exp(1j*2*pi*self.phase[i0,i1][H.nonzero()]*Nflux)
-#                   self.H[i0,i1] = asmatrix(H)
-
-#                   self.H[i0,i1] = asmatrix(asarray(self.H[i0,i1]) * exp(1j*2*pi*self.phase[i0,i1]*Nflux))
-
                     for n,m in array(asarray(self.H[i0,i1]).nonzero()).transpose():
                         self.H[i0,i1][n,m] *= exp(1j*2*pi*self.phase[i0,i1][n,m]*Nflux)
 
-#                        pos = self.xyz.atoms[n].pos
-#                        rs = [ dot(pos,self.xyz.rzp[0]) , dot(pos,self.xyz.rzp[1]) ]
-#                        pos_shifted = self.xyz_shifted[i0,i1].atoms[m].pos
-#                        rd = [ dot(pos_shifted,self.xyz.rzp[0]) , dot(pos_shifted,self.xyz.rzp[1]) ]
-#
-#                        self.H[i0,i1][n,m] *= phase(rs,rd,Nflux)
-#                   print
 
     def H_eff(self,ka):
         res = self.H[0,0] + 0.0
@@ -240,6 +224,7 @@ def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
     BETA = param.TRIOZON_BETA
     A = param.TRIOZON_A
     DELTA = param.TRIOZON_DELTA
+#    print "CUTOFF: ",TRIO_CUTOFF
 
     def hopping(pos_a,pos_b):
 #        if abs(pos_a[2] - pos_b[2]) > Z_CUTOFF:
@@ -250,7 +235,7 @@ def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
         else:
             d = norm(pos_b-pos_a);
             if d < TRIO_CUTOFF:
-                return -BETA * exp((A - d)/DELTA);
+                return -BETA * exp((A - d)/DELTA)
         return 0.0
 
     x = xyz.merge(xyz_sheet_A,xyz_sheet_B)
@@ -268,11 +253,11 @@ def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
                 H[0,0][i,j] = hop
                 H[0,0][j,i] = conj(hop)
 
-    for i0 in range(5):
-        for i1 in range(-5,5):
+    for i0 in range(6):
+        for i1 in range(-6,6):
             shift = i0 * period[0] + i1 * period[1]
-            if norm(shift) > Z_CUTOFF + norm(period[0]) + norm(period[1]):
-                continue
+#            if norm(shift) > Z_CUTOFF + norm(period[0]) + norm(period[1]):
+#                continue
             if i0 == 0 and i1 <= 0:
                 continue
             h_hop = Matrix(zeros((Natoms,Natoms),'D'))
@@ -288,6 +273,7 @@ def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
                         h_hop[i,j] = hop
                         nonzero = True
             if nonzero:
+		assert norm(shift) <= Z_CUTOFF + norm(period[0]) + norm(period[1])
                 H[i0,i1] = h_hop
 
     return sheet(H,x)
