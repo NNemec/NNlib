@@ -62,7 +62,6 @@ class scan_adaptive:
             print str,
             sys.stdout.flush()
 
-
     def store(self,h5group,gname):
         if hasattr(h5group,gname):
             getattr(h5group,gname)._f_remove(recursive=True)
@@ -175,15 +174,15 @@ class scan_adaptive:
 
         self.x = allx[idxunique]
         self.y = resize(self.y,(len(allx),)+self.y.shape[1:])[idxunique]
-        doidx = nonzero(idxisnew)
+        doidx, = nonzero(idxisnew)
         if len(doidx) == 0:
             self.debugout("do=0, nothing to do.\n")
         else:
             self.debugout("do=%i ... "%len(doidx))
             starttime = time()
-            for i in nonzero(idxisnew):
+            for i in doidx:
                 self.y[i,...] = asarray(self.f(self.x[i])).ravel()
-            self.debugout("done. (%g s/point)\n"%((time()-starttime)/len(nonzero(idxisnew))))
+            self.debugout("done. (%g s/point)\n"%((time()-starttime)/len(doidx)))
 
 
     def divide(self,
@@ -199,7 +198,7 @@ class scan_adaptive:
 
 
     def find_extrema(self):
-        y = self.y[:,nonzero(self.masksensitive)]
+        y = self.y[:,self.masksensitive]
         y = concatenate((y[-1:,:],y,y[:1,:]),axis=0)
         diff = y[1:,:] - y[:-1,:]
         extrema = (diff[1:,:] * diff[:-1,:]) <= 0
@@ -219,7 +218,7 @@ class scan_adaptive:
     ):
         self.debugout("refine extrema: ")
         x = self.x[:]
-        y = self.y[:,nonzero(self.masksensitive)]
+        y = self.y[:,self.masksensitive]
 
         if ylims is None:
             ylims = self.ylims
@@ -279,14 +278,14 @@ class scan_adaptive:
         if xminstep is None:
             xminstep = (xlims[1] - xlims[0]) * 1e-3
 
-        x = self.x[self.find_extrema().any(1).nonzero()]
+        x = self.x[self.find_extrema().any(1)]
         self.addpoints(concatenate([x-2*xminstep,x-xminstep,x+xminstep,x+2*xminstep]),xminstep=xminstep)
 
 
     def refine_extrema_quad(self,):
         self.debugout("refine extrema quadratically: ")
         x = self.x[:,None]
-        y = self.y[:,nonzero(self.masksensitive)]
+        y = self.y[:,self.masksensitive]
 
         if self.period is not None:
             x = concatenate((x,x[:2,:]+self.period),axis=0)
@@ -337,8 +336,7 @@ class scan_adaptive:
     def refine_visible(self,maxangle=pi/100,xlims=None,ylims=None,xminstep=None,yminstep=None):
         self.debugout("refine visible: ")
         x = self.x
-        y = self.y.reshape((self.y.shape[0],prod(self.y.shape[1:])))[:,nonzero(self.masksensitive.ravel())]
-#        y = self.y[:,self.masksensitive] # reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
+        y = self.y[:,self.masksensitive]
 
         xlims_arg = xlims
         if xlims is None:
@@ -355,20 +353,15 @@ class scan_adaptive:
             xminstep = (xlims[1] - xlims[0]) * self.precision
 
         if ylims is None:
-#           print "!!1!!"
             ylims = self.ylims
         if ylims is None:
             if self.sameyscale:
-#               print "!!2!!"
                 ylims = (asarray(y.ravel().min())[None],asarray(y.ravel().max())[None])
             else:
-#               print "!!3!!"
                 ylims = (y.min(axis=0),y.max(axis=0))
         else:
             if not self.sameyscale:
-#               print "!!4!!"
                 ylims = (ylims[0][self.masksensitive],ylims[1][self.masksensitive])
-#       print "ylims = ", ylims
 
         if yminstep is None:
             yminstep = self.yminstep
@@ -408,14 +401,11 @@ class scan_adaptive:
         select = zeros(xdiff.shape+y.shape[1:],bool)
         select[:-1,:] |= y_interpolated_is_off
         select[1:,:] |= y_interpolated_is_off
-#        print "select =",select
         select[:-1,:] |= (abs(y_left_extrapolated - y[:-2,:]) > yminstep)
         select[1:,:] |= (abs(y_right_extrapolated - y[2:,:]) > yminstep)
-#        print "select =",select
 
         select &= ((y[1:,:] >= ylims[0][None,:]) | (y[:-1,:] >= ylims[0][None,:]))
         select &= ((y[1:,:] <= ylims[1][None,:]) | (y[:-1,:] <= ylims[1][None,:]))
-#        print "select =",select
 
         xsplit = (x[1:] + x[:-1]) / 2
         if self.randomize != 0.0:
@@ -469,7 +459,6 @@ class scan_adaptive:
             res += [slope[sgnchange[sel,:]!=0]]
         if calcslopesign:
             res += [sgnchange[sel,:][sgnchange[sel,:]!=0]]
-#        return zip(*res)
         return res
 
 
