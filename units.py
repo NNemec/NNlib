@@ -42,3 +42,5 @@ gamma = 2.66 * eV # basic coupling strength
 
 m_e = 9.1093897e-31 * kg # electron mass
 mu_B = electron*planck/(4*pi*m_e) # Bohr magneton
+
+rydberg = 13.6056923 * eV

@@ -35,13 +35,18 @@ def armchair(N):
 
     res = xyz.chain((0,0,period))
     res.radius = r
+
+    def addatom(rho,phi,z):
+	res.atoms.append(xyz.atom('C',
+	    pos=(rho*cos(phi),rho*sin(phi),z),
+	    rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]],
+	))
+	    
     for n in range(N):
-        res.atoms.extend([
-            xyz.atom('C',(r*cos(2*pi*(6*n  )/(6*N)),r*sin(2*pi*(6*n  )/(6*N)),period/2)),
-            xyz.atom('C',(r*cos(2*pi*(6*n+1)/(6*N)),r*sin(2*pi*(6*n+1)/(6*N)),0)),
-            xyz.atom('C',(r*cos(2*pi*(6*n+3)/(6*N)),r*sin(2*pi*(6*n+3)/(6*N)),0)),
-            xyz.atom('C',(r*cos(2*pi*(6*n+4)/(6*N)),r*sin(2*pi*(6*n+4)/(6*N)),period/2)),
-        ])
+        addatom(r,2*pi*(6*n  )/(6*N),period/2)
+        addatom(r,2*pi*(6*n+1)/(6*N),0)
+        addatom(r,2*pi*(6*n+3)/(6*N),0)
+        addatom(r,2*pi*(6*n+4)/(6*N),period/2)
 
     return res
 
@@ -54,13 +59,18 @@ def zigzag(N):
 
     res = xyz.chain((0,0,period))
     res.radius = r
+
+    def addatom(rho,phi,z):
+	res.atoms.append(xyz.atom('C',
+	    pos=(rho*cos(phi),rho*sin(phi),z),
+	    rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]],
+	))
+	    
     for n in range(N):
-        res.atoms.extend([
-            xyz.atom('C',(r*cos(2*pi*(2*n  )/(2*N)),r*sin(2*pi*(2*n  )/(2*N)),period/6)),
-            xyz.atom('C',(r*cos(2*pi*(2*n  )/(2*N)),r*sin(2*pi*(2*n  )/(2*N)),period/2)),
-            xyz.atom('C',(r*cos(2*pi*(2*n+1)/(2*N)),r*sin(2*pi*(2*n+1)/(2*N)),0)),
-            xyz.atom('C',(r*cos(2*pi*(2*n+1)/(2*N)),r*sin(2*pi*(2*n+1)/(2*N)),period/1.5)),
-        ])
+        addatom(r,2*pi*(2*n  )/(2*N),period/6)
+        addatom(r,2*pi*(2*n  )/(2*N),period/2)
+        addatom(r,2*pi*(2*n+1)/(2*N),0)
+        addatom(r,2*pi*(2*n+1)/(2*N),period/1.5)
 
     return res
 
@@ -150,11 +160,14 @@ def chiral(M,N):
     dz_b = - CC_distance * sqrt(3) * sqrt((2*M+N)**2 + (M+2*N)**2 - (2*M+N)*(M+2*N)) * M / (2*(M*M + M*N + N*N))
     dz_c = dz_a - dz_b
 
-#    for i in sorted(locals().keys()):
-#        print i+":\t"+str(locals()[i])
 
     res = xyz.chain((0,0,period))
     res.radius = r
+    def addatom(rho,phi,z):
+	res.atoms.append(xyz.atom('C',
+	    pos=(rho*cos(phi),rho*sin(phi),z),
+	    rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]],
+	))
 
     n = 0
     for l in range(Nlines):
@@ -164,10 +177,9 @@ def chiral(M,N):
                 z_A = dz_a * l + dz_c * p
                 phi_B = phi_A + (dphi_a+dphi_b)/3
                 z_B = z_A + (dz_a+dz_b)/3
-                res.atoms.extend([
-                    xyz.atom('C',(cos(phi_A)*r,sin(phi_A)*r,z_A)),
-                    xyz.atom('C',(cos(phi_B)*r,sin(phi_B)*r,z_B)),
-                ])
+                addatom(r,phi_A,z_A)
+                addatom(r,phi_B,z_B)
+
     assert len(res.atoms) == Natoms
 
     return res
@@ -199,6 +211,7 @@ def grapheneribbon(M,N):
         minx = min(minx,a.pos[0])
         maxx = max(maxx,a.pos[0])
         a.pos[1] = 0
+	a.rot = asmatrix(eye(3))
     for a in cnt.atoms:
         a.pos[0] -= (maxx+minx)*0.5
     return cnt
@@ -207,8 +220,8 @@ def graphene():
     dCC = param.GRAPHENE_CC_DISTANCE
     res = xyz.sheet([[.75**.5*dCC,1.5*dCC,0],[-.75**.5*dCC,1.5*dCC,0]])
     res.atoms.extend([
-        xyz.atom('C',(0.,.5*dCC,0.)),
-        xyz.atom('C',(0.,-.5*dCC,0.)),
+        xyz.atom('C',(0.,.5*dCC,0.),eye(3)),
+        xyz.atom('C',(0.,-.5*dCC,0.),eye(3)),
     ])
     return res
 

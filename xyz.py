@@ -4,18 +4,26 @@ from copy import deepcopy
 #from cnt import armchair, zigzag, chiral, swcnt
 
 class atom:
-    def __init__(self,typ,pos):
+    def __init__(self,typ,pos,rot=None):
         self.typ = typ
         self.pos = asarray(pos)
         assert self.pos.shape == (3,)
+	if rot is not None:
+	    self.rot = asmatrix(rot)
+	    assert self.rot.shape == (3,3)
 
     def shift(self,disp):
-#        assert disp.shape == (3,)
         return atom(self.typ,self.pos+disp)
 
     def rotate(self,rot):
-        assert asarray(rot).shape == (3,3)
-        return atom(self.typ,dot(asarray(rot),self.pos))
+	rot = asmatrix(rot)
+        assert rot.shape == (3,3)
+	pos = dot(rot,self.pos)
+	if hasattr(self,rot):
+	    rot = dot(rot,self.rot)
+	else:
+	    rot = None
+        return atom(self.typ,pos=pos,rot=rot)
 
 class structure:
     def __init__(self):
@@ -97,7 +105,7 @@ def square_ladder(N):
     spacing = param.GRAPHENE_CC_DISTANCE
     res = chain((0,0,spacing))
     for n in range(N):
-        res.atoms.append(atom('C',(spacing*(n-(N-1)*0.5),0,0)))
+        res.atoms.append(atom('C',(spacing*(n-(N-1)*0.5),0,0)),rot=eye(3))
     return res
 
 def square_tube(N):
@@ -106,7 +114,7 @@ def square_tube(N):
     res = chain((0,0,spacing))
     for n in range(N):
         phi = 2*pi*n/N
-        res.atoms.append(atom('C',(cos(phi)*radius,sin(phi)*radius,0)))
+        res.atoms.append(atom('C',(cos(phi)*radius,sin(phi)*radius,0)),rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]])
     return res
 
 def linchain():
