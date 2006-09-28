@@ -10,9 +10,9 @@ class papa:
         f = open(fname,'r')
 
         def readval(name=None):
-	    line = f.readline()
-	    line = re.sub(r'\{(.*) (.*)\}',r'{\1-\2}',line)
-#	    print line
+            line = f.readline()
+            line = re.sub(r'\{(.*) (.*)\}',r'{\1-\2}',line)
+#           print line
             vals = line.split()
             if name is not None:
 #                print vals[3],name
@@ -30,7 +30,7 @@ class papa:
         for i in range(3):
             f.readline()
 
-        setattr(self,'lambda_',readval('lambda'))
+        setattr(self,'lambda_',readval('lambda')/bohr**.5)
 
         for l in ['s','p']:
             setattr(self,'alpha_%s'%l, readval('a_%s'%l)*rydberg)
@@ -53,9 +53,9 @@ class papa:
 
         for l in ['sss','sps','pps','ppp']:
             ltrans = '{%s-%s}'%(l[:2],{'s':'sigma','p':'pi'}[l[2]])
-            setattr(self,'p_%s'%l, readval('e_%s'%ltrans)*rydberg)
-            setattr(self,'q_%s'%l, readval('f_%s'%ltrans)*rydberg/bohr)
-            setattr(self,'r_%s'%l, readval('fbar_%s'%ltrans)*rydberg/bohr**2)
+            setattr(self,'p_%s'%l, readval('e_%s'%ltrans)/bohr)
+            setattr(self,'q_%s'%l, readval('f_%s'%ltrans)/bohr**2)
+            setattr(self,'r_%s'%l, readval('fbar_%s'%ltrans)/bohr**3)
             setattr(self,'s_%s'%l, readval('g_%s'%ltrans)/bohr**.5)
 
         for i in range(24):
@@ -81,10 +81,12 @@ class papa:
 
         rho = zeros((Natoms,),'d')
         H = []
+        S = []
         for n in range(20):
             at_sh = xyz.shift(period*n).atoms
 
-            h_hop = Matrix(zeros((4*Natoms,4*Natoms),'D'))
+            h = Matrix(zeros((4*Natoms,4*Natoms),'D'))
+            s = Matrix(zeros((4*Natoms,4*Natoms),'D'))
             nonzero = False
             for i in range(Natoms):
                 for j in range(Natoms):
@@ -97,19 +99,19 @@ class papa:
                     if R > (self.rcut+5*self.screenl):
                         continue
 
-		    U = zeros((3,3))
-		    
-		    U[:,0] = Rvec/R
-		    i=0
-		    if abs(U[1,0])<abs(U[0,0]):
-			i=1
-		    if abs(U[2,0])<abs(U[i,0]):
-			i=2
-		    U[i,1]
-		    U[:,2] = cross(U[:,0],U[:,1])
-		    U[:,2] = U[:,2]/norm(U[:,2])
-		    U[:,1] = cross(U[:,0],U[:,2])
-		    U = Matrix(U)
+                    U = zeros((3,3))
+
+                    U[:,0] = Rvec/R
+                    l=0
+                    if abs(U[1,0])<abs(U[0,0]):
+                        l=1
+                    if abs(U[2,0])<abs(U[l,0]):
+                        l=2
+                    U[l,1] = 1
+                    U[:,2] = cross(U[:,0],U[:,1])
+                    U[:,2] = U[:,2]/norm(U[:,2])
+                    U[:,1] = cross(U[:,0],U[:,2])
+                    U = Matrix(U)
 
                     nonzero = True
                     cutoff = self.cutoff(R)
@@ -117,26 +119,42 @@ class papa:
                     rho[i] += drho
                     rho[j] += drho
 
+                    U4 = Matrix(eye(4))
+                    U4[1:4,1:4] = U
+		    
+
                     h_sss = (self.a_sss + self.b_sss*R + self.c_sss*R**2)*exp(-self.d_sss**2*R)*cutoff
                     h_sps = (self.a_sps + self.b_sps*R + self.c_sps*R**2)*exp(-self.d_sps**2*R)*cutoff
                     h_pps = (self.a_pps + self.b_pps*R + self.c_pps*R**2)*exp(-self.d_pps**2*R)*cutoff
                     h_ppp = (self.a_ppp + self.b_ppp*R + self.c_ppp*R**2)*exp(-self.d_ppp**2*R)*cutoff
 
-                    sk_hop = Matrix([
+                    h_sk = Matrix([
                         [h_sss,h_sps, 0.0 , 0.0 ],
                         [h_sps,h_pps, 0.0 , 0.0 ],
                         [ 0.0 , 0.0 ,h_ppp, 0.0 ],
                         [ 0.0 , 0.0 , 0.0 ,h_ppp],
                     ])
-		    
-		    U4 = Matrix(eye(4))
-		    U4[1:4,1:4] = U
-		    
-                    ##### sk_hop is not yet correctly oriented !! #####
 
-                    h_hop[4*i:4*(i+1),4*j:4*(j+1)] = at[i].rot4 * U4 * sk_hop * U4.T * at[j].rot4.T
+                    h[4*i:4*(i+1),4*j:4*(j+1)] = at[i].rot4.T * U4 * h_sk * U4.T * at[j].rot4
+
+
+                    s_sss = (1 + self.p_sss*R + self.q_sss*R**2 + self.r_sss*R**3)*exp(-self.s_sss**2*R)*cutoff
+                    s_sps = (self.p_sps*R + self.q_sps*R**2 + self.r_sps*R**3)*exp(-self.s_sps**2*R)*cutoff
+                    s_pps = (1 + self.p_pps*R + self.q_pps*R**2 + self.r_pps*R**3)*exp(-self.s_pps**2*R)*cutoff
+                    s_ppp = (1 + self.p_ppp*R + self.q_ppp*R**2 + self.r_ppp*R**3)*exp(-self.s_ppp**2*R)*cutoff
+
+                    s_sk = Matrix([
+                        [s_sss,s_sps, 0.0 , 0.0 ],
+                        [s_sps,s_pps, 0.0 , 0.0 ],
+                        [ 0.0 , 0.0 ,s_ppp, 0.0 ],
+                        [ 0.0 , 0.0 , 0.0 ,s_ppp],
+                    ])
+
+                    s[4*i:4*(i+1),4*j:4*(j+1)] = at[i].rot4.T * U4 * s_sk * U4.T * at[j].rot4
+
             if nonzero:
-                H.append(h_hop)
+                H.append(h)
+                S.append(s)
             else:
                 break
 
@@ -149,7 +167,13 @@ class papa:
             H[0][4*i+2,4*i+2] = h_p
             H[0][4*i+3,4*i+3] = h_p
 
+            S[0][4*i,4*i] = 1.0
+            S[0][4*i+1,4*i+1] = 1.0
+            S[0][4*i+2,4*i+2] = 1.0
+            S[0][4*i+3,4*i+3] = 1.0
+
             for j in range(i):
                 H[0][4*i:4*(i+1),4*j:4*(j+1)] = transpose(H[0][4*j:4*(j+1),4*i:4*(i+1)])
+                S[0][4*i:4*(i+1),4*j:4*(j+1)] = transpose(S[0][4*j:4*(j+1),4*i:4*(i+1)])
 
-        return chain(H,xyz,do_cache=do_cache)
+        return chain(H,S=S,xyz_chain=xyz,do_cache=do_cache)

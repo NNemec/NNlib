@@ -17,7 +17,7 @@ param.createdefault("TRIOZON_CUTOFF", param.TRIOZON_A+5*param.TRIOZON_DELTA)
 param.createdefault("TRIOZON_Z_CUTOFF", (param.TRIOZON_CUTOFF**2 - (0.95*param.GRAPHITE_INTERLAYER_DISTANCE)**2)**0.5)
 
 class chain:
-    def __init__(self,H_B0,xyz_chain=None,do_cache=True):
+    def __init__(self,H_B0,xyz_chain=None,do_cache=True,S=None):
 	assert type(H_B0) is list
         self.N_atoms = H_B0[0].shape[0]
 	for h_b0 in H_B0:
@@ -26,12 +26,18 @@ class chain:
         self.H = H_B0
         self.H_B0 = H_B0
 
-        if xyz_chain is not None:
+        if xyz_chain is not None and len(xyz_chain.atoms) == self.N_atoms:
             assert isinstance(xyz_chain,xyz.chain)
             assert len(xyz_chain.atoms) == self.N_atoms
             self.xyz = xyz_chain
             self.xyz_shifted = [ xyz_chain.shift(xyz_chain.period * i) for i in range(1,len(H_B0)) ]
             self.bfield = array((0,0,0))
+
+	if S is not None:
+	    for s in S:
+		assert type(s) is matrix
+		assert s.shape == (self.N_atoms,self.N_atoms)
+	    self.S = S
 
         self.energy = None
         if do_cache:
@@ -78,6 +84,7 @@ class chain:
         # alpha = energy*S_hop - chain.H_hop;
         # beta = energy*chain.S_hop' - chain.H_hop';
         assert len(self.H) == 2
+	assert not hasattr(self,'S')
         alpha = - self.H[1]
         beta = - adj(self.H[1])
         epsilon = E - self.H[0]
@@ -122,8 +129,19 @@ class chain:
             res += exp(1j*k*i)*self.H[i] + exp(-1j*k*i)*adj(self.H[i])
         return res
 
+    def S_eff(self,k):
+	if not hasattr(self,'S'):
+	    return None
+        res = self.S[0] + 0.0
+        for i in range(1,len(self.S)):
+            res += exp(1j*k*i)*self.S[i] + exp(-1j*k*i)*adj(self.S[i])
+        return res
+
     def band_energies(self,k):
-        return array(sorted(list(real(eigvalsh(self.H_eff(k))))))
+	if hasattr(self,'S'):
+	    return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(k),self.S_eff(k))))))
+	else:
+	    return array(sorted(list(real(scipy.linalg.eigvalsh(self.H_eff(k))))))
 
     def DOS(self,energy=None):
         return -1./pi*imag(trace(self.G_bulk(energy)))/self.N_atoms
