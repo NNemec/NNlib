@@ -18,11 +18,11 @@ param.createdefault("TRIOZON_Z_CUTOFF", (param.TRIOZON_CUTOFF**2 - (0.95*param.G
 
 class chain:
     def __init__(self,H_B0,xyz_chain=None,do_cache=True,S=None):
-	assert type(H_B0) is list
+        assert type(H_B0) is list
         self.N_atoms = H_B0[0].shape[0]
-	for h_b0 in H_B0:
+        for h_b0 in H_B0:
             assert type(h_b0) is matrix
-	    assert h_b0.shape == (self.N_atoms,self.N_atoms)
+            assert h_b0.shape == (self.N_atoms,self.N_atoms)
         self.H = H_B0
         self.H_B0 = H_B0
 
@@ -33,11 +33,11 @@ class chain:
             self.xyz_shifted = [ xyz_chain.shift(xyz_chain.period * i) for i in range(1,len(H_B0)) ]
             self.bfield = array((0,0,0))
 
-	if S is not None:
-	    for s in S:
-		assert type(s) is matrix
-		assert s.shape == (self.N_atoms,self.N_atoms)
-	    self.S = S
+        if S is not None:
+            for s in S:
+                assert type(s) is matrix
+                assert s.shape == (self.N_atoms,self.N_atoms)
+            self.S = S
 
         self.energy = None
         if do_cache:
@@ -54,9 +54,9 @@ class chain:
                 self.H = self.H_B0
             else:
                 self.H = (
-		    [ bf.calc_H_int(self.bfield,self.H_B0[0],self.xyz) ]
-            	    + 
-		    [ bf.calc_H_hop(self.bfield,self.H_B0[i],self.xyz,self.xyz_shifted[i-1]) for i in range(1,len(self.H_B0)) ]
+                    [ bf.calc_H_int(self.bfield,self.H_B0[0],self.xyz) ]
+                    +
+                    [ bf.calc_H_hop(self.bfield,self.H_B0[i],self.xyz,self.xyz_shifted[i-1]) for i in range(1,len(self.H_B0)) ]
                 )
             if hasattr(self,'cache'):
                 self.cache = {}
@@ -84,7 +84,7 @@ class chain:
         # alpha = energy*S_hop - chain.H_hop;
         # beta = energy*chain.S_hop' - chain.H_hop';
         assert len(self.H) == 2
-	assert not hasattr(self,'S')
+        assert not hasattr(self,'S')
         alpha = - self.H[1]
         beta = - adj(self.H[1])
         epsilon = E - self.H[0]
@@ -130,18 +130,18 @@ class chain:
         return res
 
     def S_eff(self,k):
-	if not hasattr(self,'S'):
-	    return None
+        if not hasattr(self,'S'):
+            return None
         res = self.S[0] + 0.0
         for i in range(1,len(self.S)):
             res += exp(1j*k*i)*self.S[i] + exp(-1j*k*i)*adj(self.S[i])
         return res
 
     def band_energies(self,k):
-	if hasattr(self,'S'):
-	    return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(k),self.S_eff(k))))))
-	else:
-	    return array(sorted(list(real(scipy.linalg.eigvalsh(self.H_eff(k))))))
+        if hasattr(self,'S'):
+            return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(k),self.S_eff(k))))))
+        else:
+            return array(sorted(list(real(scipy.linalg.eigvalsh(self.H_eff(k))))))
 
     def DOS(self,energy=None):
         return -1./pi*imag(trace(self.G_bulk(energy)))/self.N_atoms
@@ -170,15 +170,29 @@ class chain:
         A = self.N_atoms
         if hasattr(self,'xyz'):
             xyz = self.xyz.multiply(N)
-        assert len(H_B0) == 2
+        assert len(self.H_B0) <= N+1
         H = [ Matrix(zeros((N*A,N*A),'D')) for i in range(2) ]
         for n in range(N):
             H[0][n*A:(n+1)*A,n*A:(n+1)*A] = self.H_B0[0]
-        for n in range(1,N):
-            H[0][(n-1)*A:n*A,n*A:(n+1)*A] = self.H_B0[1]
-            H[0][n*A:(n+1)*A,(n-1)*A:n*A] = adj(self.H_B0[1])
-        H[1][(N-1)*A:N*A,0:A] = self.H_B0[1]
-        return chain(H,xyz)
+        for i in range(1,len(self.H_B0)):
+            for n in range(i):
+                H[1][(n-i+N)*A:(n-i+N+1)*A,n*A:(n+1)*A] = self.H_B0[i]
+            for n in range(i,N):
+                H[0][(n-i)*A:(n-i+1)*A,n*A:(n+1)*A] = self.H_B0[i]
+                H[0][n*A:(n+1)*A,(n-i)*A:(n-i+1)*A] = adj(self.H_B0[i])
+        if hasattr(self,'S'):
+            S = [ Matrix(zeros((N*A,N*A),'D')) for i in range(2) ]
+            for n in range(N):
+                S[0][n*A:(n+1)*A,n*A:(n+1)*A] = self.S[0]
+            for i in range(1,len(self.S)):
+                for n in range(i):
+                    S[1][(n-i+N)*A:(n-i+N+1)*A,n*A:(n+1)*A] = self.S[i]
+                for n in range(i,N):
+                    S[0][(n-i)*A:(n-i+1)*A,n*A:(n+1)*A] = self.S[i]
+                    S[0][n*A:(n+1)*A,(n-i)*A:(n-i+1)*A] = adj(self.S[i])
+        else:
+            S = None
+        return chain(H,xyz,S=S)
 
 def square_ladder(N,gamma,do_cache=True):
     H = [ Matrix(zeros((N,N),'D')) for i in range(2) ]
