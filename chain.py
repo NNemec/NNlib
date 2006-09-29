@@ -209,7 +209,7 @@ def square_ladder(N,gamma,do_cache=True):
 def linchain(gamma,do_cache=True):
     return square_ladder(N=1,gamma=gamma,do_cache=do_cache)
 
-def tight_binding_1stNN_graphene(xyz_chain,do_cache=True):
+def tight_binding_graphene_1stNN(xyz_chain,do_cache=True):
     N = len(xyz_chain.atoms)
     H = [ Matrix(zeros((N,N),'D')) for i in range(2) ]
     maxdist = param.GRAPHENE_CC_DISTANCE * 1.1
@@ -227,7 +227,7 @@ def tight_binding_1stNN_graphene(xyz_chain,do_cache=True):
 
     return chain(H,xyz_chain,do_cache=do_cache)
 
-def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B,do_cache=True):
+def tight_binding_triozon(xyz,do_cache=True,graphite=False):
     # based on the parametrization described in
     # doi:10.1103/PhysRevB.64.121401
 
@@ -240,82 +240,36 @@ def tight_binding_dwcnt_triozon(xyz_tube_A,xyz_tube_B,do_cache=True):
     A = param.TRIOZON_A
     DELTA = param.TRIOZON_DELTA
 
-    def hopping(pos_a,pos_b):
-        if abs(pos_a[2] - pos_b[2]) > Z_CUTOFF:
+    if graphite:
+        def hopping(pos_a,pos_b):
+            if abs(pos_a[2] - pos_b[2]) > Z_CUTOFF:
+                return 0.0
+            elif abs(pos_a[1]-pos_b[1]) < CC_DIST*0.1:
+                if norm(pos_a - pos_b) < CC_DIST*1.1:
+                    return -NN_HOP
+            else:
+                d = norm(pos_b-pos_a);
+                if d < TRIO_CUTOFF:
+                    return -BETA * exp((A - d)/DELTA);
             return 0.0
-        elif abs(norm(pos_a[:2])-norm(pos_b[:2])) < CC_DIST*0.1:
-            if norm(pos_a - pos_b) < CC_DIST*1.1:
-                return -NN_HOP
-        else:
-            d = norm(pos_b-pos_a);
-            if d < TRIO_CUTOFF:
-                cos_theta = vdot(pos_a[:2],pos_b[:2])/(norm(pos_a[:2])*norm(pos_b[:2]));
-                return -BETA * cos_theta * exp((A - d)/DELTA);
-        return 0.0
-
-    x = xyz.merge(xyz_tube_A,xyz_tube_B)
-    at = x.atoms
-    period = x.period
-
-    Natoms = len(x.atoms)
-    H = [ Matrix(zeros((Natoms,Natoms),'D')) ]
-
-    for i in range(Natoms):
-        for j in range(i+1,Natoms):
-            hop = hopping(at[i].pos,at[j].pos)
-            if hop != 0.0:
-                H[0][i,j] = hop
-                H[0][j,i] = conj(hop)
-
-    for n in range(20):
-        x_shifted = x.shift(period*(n+1))
-        at_sh = x_shifted.atoms
-
-        h = Matrix(zeros((Natoms,Natoms),'D'))
-        nonzero = False
-        for i in range(Natoms):
-            for j in range(Natoms):
-                hop = hopping(at[i].pos,at_sh[j].pos)
-                if hop != 0.0:
-                    nonzero = True
-                    h[i,j] = hop
-        if nonzero:
-            H.append(h)
-        else:
-            break
-
-    return chain(H,x,do_cache=do_cache)
-
-def tight_binding_graphite_triozon(xyz_tube_A,xyz_tube_B,do_cache=True):
-    # based on the parametrization described in
-    # doi:10.1103/PhysRevB.64.121401
-
-    CC_DIST = param.GRAPHENE_CC_DISTANCE
-    NN_HOP = param.GRAPHENE_1STNN_HOPPING
-
-    TRIO_CUTOFF = param.TRIOZON_CUTOFF
-    Z_CUTOFF = param.TRIOZON_Z_CUTOFF
-    BETA = param.TRIOZON_BETA
-    A = param.TRIOZON_A
-    DELTA = param.TRIOZON_DELTA
-
-    def hopping(pos_a,pos_b):
-        if abs(pos_a[2] - pos_b[2]) > Z_CUTOFF:
+    else: # MWCNT
+        def hopping(pos_a,pos_b):
+            if abs(pos_a[2] - pos_b[2]) > Z_CUTOFF:
+                return 0.0
+            elif abs(norm(pos_a[:2])-norm(pos_b[:2])) < CC_DIST*0.1:
+                if norm(pos_a - pos_b) < CC_DIST*1.1:
+                    return -NN_HOP
+            else:
+                d = norm(pos_b-pos_a);
+                if d < TRIO_CUTOFF:
+                    cos_theta = vdot(pos_a[:2],pos_b[:2])/(norm(pos_a[:2])*norm(pos_b[:2]));
+                    return -BETA * cos_theta * exp((A - d)/DELTA);
             return 0.0
-        elif abs(pos_a[1]-pos_b[1]) < CC_DIST*0.1:
-            if norm(pos_a - pos_b) < CC_DIST*1.1:
-                return -NN_HOP
-        else:
-            d = norm(pos_b-pos_a);
-            if d < TRIO_CUTOFF:
-                return -BETA * exp((A - d)/DELTA);
-        return 0.0
 
-    x = xyz.merge(xyz_tube_A,xyz_tube_B)
-    at = x.atoms
-    period = x.period
+    at = xyz.atoms
+    period = xyz.period
 
-    Natoms = len(x.atoms)
+    Natoms = len(at)
     H = [ Matrix(zeros((Natoms,Natoms),'D')) ]
 
     for i in range(Natoms):
@@ -326,8 +280,8 @@ def tight_binding_graphite_triozon(xyz_tube_A,xyz_tube_B,do_cache=True):
                 H[0][j,i] = conj(hop)
 
     for n in range(1,100):
-        x_shifted = x.shift(period*n)
-        at_sh = x_shifted.atoms
+        xyz_shifted = xyz.shift(period*n)
+        at_sh = xyz_shifted.atoms
 
         h = Matrix(zeros((Natoms,Natoms),'D'))
         nonzero = False
@@ -345,7 +299,6 @@ def tight_binding_graphite_triozon(xyz_tube_A,xyz_tube_B,do_cache=True):
     assert n < 99
 
     return chain(H,x,do_cache=do_cache)
-
 
 if __name__ == "__main__":
     import cnt
