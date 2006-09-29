@@ -63,7 +63,7 @@ def figtitle(title):
     )
 
 def set_figsize_inches(w,h):
-    pylab.gcf().set_figsize_inches(w,h)
+    pylab.gcf().set_size_inches(w,h)
 
 
 _subplot_grid = [1,1,1]
