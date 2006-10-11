@@ -16,7 +16,7 @@ class atom:
         return atom(self.typ,self.pos+disp)
 
     def rotate(self,rot):
-	rot = asmatrix(rot)
+	rot = asarray(rot)
         assert rot.shape == (3,3)
 	pos = dot(rot,self.pos)
 	if hasattr(self,'rot'):
