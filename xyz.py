@@ -19,7 +19,7 @@ class atom:
 	rot = asmatrix(rot)
         assert rot.shape == (3,3)
 	pos = dot(rot,self.pos)
-	if hasattr(self,rot):
+	if hasattr(self,'rot'):
 	    rot = dot(rot,self.rot)
 	else:
 	    rot = None

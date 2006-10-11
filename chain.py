@@ -298,7 +298,7 @@ def tight_binding_triozon(xyz,do_cache=True,graphite=False):
 
     assert n < 99
 
-    return chain(H,x,do_cache=do_cache)
+    return chain(H,xyz,do_cache=do_cache)
 
 if __name__ == "__main__":
     import cnt
