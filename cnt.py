@@ -124,9 +124,17 @@ def chiral(M,N):
     r = radius(M,N)
     multiple = gcd(M,N)
     multiple_perp = gcd((M+2*N),(2*M+N))
+#                 = gcd(3M+3N,2M+N)
+#                 = gcd(-3M,2M+N)
+#                 = gcd(-3M,-M+N)
+#                 = gcd(3M,M-N)
+
     M_perp = (M+2*N) / multiple_perp
-    N_perp = -(2*M+N) / multiple_perp
-    period = CC_distance * (3.0 * (M_perp**2 + N_perp**2 + M_perp*N_perp))**0.5
+    N_perp = (2*M+N) / multiple_perp
+    period = CC_distance * (3.0 * (M_perp**2 + N_perp**2 - M_perp*N_perp))**0.5
+#          = CC_distance * sqrt(3.0) * sqrt((M+2*N)**2 + (2*M+N)**2 - (M+2*N)*(2*M+N)) / multiple_perp
+#          = CC_distance * sqrt(3.0) * sqrt(3*M**2 + 3*N**2 + 3*M*N) / multiple_perp
+#          = CC_distance * 3 * sqrt(M**2 + N**2 + M*N) / gcd((M+2*N),(2*M+N))
     Nplaquettes = 2 * (M**2 + N**2 + M*N)/multiple_perp
     Natoms = Nplaquettes * 2
 
@@ -136,7 +144,7 @@ def chiral(M,N):
     for l in range(Nlines):
         start[l] = -(l*N/(M+N))
     for l in range(Nlines):
-        stop[l] = - N_perp + start[(l-(M_perp+N_perp))%Nlines] - N/multiple*((l-(M_perp+N_perp))/Nlines)
+        stop[l] = N_perp + start[(l-(M_perp-N_perp))%Nlines] - N/multiple*((l-(M_perp-N_perp))/Nlines)
 
 #    assert (sum(stop) - sum(start)) * multiple == Nplaquettes
 
