@@ -2,7 +2,7 @@ import os, sys
 from math import *
 import numpy
 from numpy import *
-import scipy.linalg
+#import scipy.linalg
 #from scipy.linalg import *
 from numpy.linalg import *
 from numpy.random import *

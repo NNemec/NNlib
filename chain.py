@@ -141,7 +141,7 @@ class chain:
         if hasattr(self,'S'):
             return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(k),self.S_eff(k))))))
         else:
-            return array(sorted(list(real(scipy.linalg.eigvalsh(self.H_eff(k))))))
+            return array(sorted(list(real(eigvalsh(self.H_eff(k))))))
 
     def DOS(self,energy=None):
         return -1./pi*imag(trace(self.G_bulk(energy)))/self.N_atoms
