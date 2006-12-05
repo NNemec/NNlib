@@ -204,7 +204,7 @@ def square_ladder(N,gamma,do_cache=True):
     for n in range(N):
         H[1][n,n] = -gamma
 
-    return chain(H,do_cache)
+    return chain(H,do_cache=do_cache)
 
 def linchain(gamma,do_cache=True):
     return square_ladder(N=1,gamma=gamma,do_cache=do_cache)
