@@ -43,7 +43,7 @@ class scan_adaptive:
             assert self.ylims[0].shape in [(1,),yshape]
             assert self.ylims[1].shape in [(1,),yshape]
         if self.yminstep is not None:
-            self.yminstep = asarray(self.minstep).ravel()
+            self.yminstep = asarray(self.yminstep).ravel()
             assert self.yminstep.shape in [(1,),yshape]
 
     def set_xlims(self,xlims):
@@ -119,18 +119,19 @@ class scan_adaptive:
         return slope[segm_idx] * xgrid[:,None] + offset[segm_idx]
 
 
-    def addpoints(self,newxpoints,xlims=None,xminstep=None,):
+    def addpoints(self,newxpoints,xlims=None,xminstep=None,internalcall=False):
         if xlims is None:
             xlims = self.xlims
         if xminstep is None:
             xminstep = self.xminstep
 
-        newxpoints = asarray(newxpoints)
+        newxpoints = asarray(newxpoints,'d')
         assert len(newxpoints.shape) == 1
         if len(newxpoints) == 0:
             self.debugout("add no points.\n")
             return
-        self.debugout("addpoints: old=%i, new=%i, "%(len(self.x),len(newxpoints)))
+        if not internalcall:
+            self.debugout("addpoints: old=%i, new=%i, "%(len(self.x),len(newxpoints)))
 
         if self.period is not None:
             newxpoints = newxpoints % self.period
@@ -145,26 +146,49 @@ class scan_adaptive:
             else:
                 newxpoints = newxpoints[(newxpoints >= xlims[0]) & (newxpoints <= xlims[1])]
             if len(newxpoints) < oldcount:
-                self.debugout("outside of xlims: %i, "%(oldcount - len(newxpoints)))
+                self.debugout("xlims-cutoff: %i, "%(oldcount - len(newxpoints)))
 
         if len(self.x) == 0:
-            self.x = concatenate((self.x,[newxpoints[0]]))
-            assert self.x.dtype.char == 'd'
+            self.x = newxpoints[:1]
+            newxpoints = newxpoints[1:]
             y0 = asarray(self.f(self.x[0])).ravel()
             self.y = resize(y0,self.x.shape + y0.shape)
             self.y[0,:] = y0
             self._initshape()
 
-        allx = concatenate((self.x,newxpoints))
+        newxpoints.sort()
+
         if xminstep is None:
             if xlims is not None:
                 xminstep = (xlims[1] - xlims[0]) * self.precision
             else:
-                xminstep = (allx.max() - allx.min()) * self.precision
+                xminstep = (max(self.x[-1],newxpoints[-1]) - min(self.x[0],newxpoints[0])) * self.precision
+
+        slot = self.x.searchsorted(newxpoints)
+        oldcount = len(newxpoints)
+        newxpoints = newxpoints[
+            ((slot == len(self.x)) | (self.x[slot%len(self.x)] - newxpoints >= xminstep))
+            &
+            ((slot == 0)           | (newxpoints - self.x[slot-1] >= xminstep))
+        ]
+        if len(newxpoints) < oldcount:
+            self.debugout("xminstep-cutoff1: %i, "%(oldcount - len(newxpoints)))
+
+        xdiff = newxpoints[1:]-newxpoints[:-1]
+        oldcount = len(newxpoints)
+        newxpoints = concatenate((newxpoints[:1],newxpoints[1:][xdiff >= xminstep]))
+        if len(newxpoints) < oldcount:
+            self.debugout("xminstep-cutoff2: %i, "%(oldcount - len(newxpoints)))
+
+        oldcount = len(newxpoints)
+
+        allx = concatenate((self.x,newxpoints))
 
         assert allx.dtype.char == 'd'
         allxrounded = (allx/xminstep).round()
-        self.debugout("duplicate in new: %i, "%(len(newxpoints) - len(unique(allxrounded[len(self.x):]))))
+        Nduplicate = len(newxpoints) - len(unique(allxrounded[len(self.x):]))
+        if Nduplicate > 0:
+            self.debugout("duplicate: %i, "%(Nduplicate))
         allxtosort = allxrounded + linspace(0,0.3,len(allxrounded))
         idxsorted = allxtosort.argsort()
         allxsorted = allxrounded[idxsorted]
@@ -175,6 +199,9 @@ class scan_adaptive:
         self.x = allx[idxunique]
         self.y = resize(self.y,(len(allx),)+self.y.shape[1:])[idxunique]
         doidx, = nonzero(idxisnew)
+        Nrounding = oldcount - len(doidx) - Nduplicate
+        if Nrounding > 0:
+            self.debugout("rounding: %i, "%(Nrounding))
         if len(doidx) == 0:
             self.debugout("do=0, nothing to do.\n")
         else:
@@ -334,7 +361,7 @@ class scan_adaptive:
 
 
     def refine_visible(self,maxangle=pi/100,xlims=None,ylims=None,xminstep=None,yminstep=None):
-        self.debugout("refine visible: ")
+        self.debugout("refine visible: Nold=%i, "%(len(self.x)))
         x = self.x
         y = self.y[:,self.masksensitive]
 
@@ -348,7 +375,7 @@ class scan_adaptive:
                 xlims = (0,self.period)
 
         if xminstep is None:
-            xminstep is self.xminstep
+            xminstep = self.xminstep
         if xminstep is None:
             xminstep = (xlims[1] - xlims[0]) * self.precision
 
@@ -404,13 +431,25 @@ class scan_adaptive:
         select[:-1,:] |= (abs(y_left_extrapolated - y[:-2,:]) > yminstep)
         select[1:,:] |= (abs(y_right_extrapolated - y[2:,:]) > yminstep)
 
+        Nselected = select.any(axis=-1).sum()
+        self.debugout("yminstep-selected: %i"%Nselected)
+
         select &= ((y[1:,:] >= ylims[0][None,:]) | (y[:-1,:] >= ylims[0][None,:]))
         select &= ((y[1:,:] <= ylims[1][None,:]) | (y[:-1,:] <= ylims[1][None,:]))
+        select = select.any(1)
+        Nylim_cutoff = Nselected - select.sum()
+        if Nylim_cutoff>0:
+            self.debugout("ylim-cutoff: %i"%Nylim_cutoff)
+
+        select &= xdiff >= 2*xminstep
+        Nxminstep_cutoff = Nselected - select.sum() - Nylim_cutoff
+        if Nxminstep_cutoff>0:
+            self.debugout("xminstep-cutoff0: %i"%Nxminstep_cutoff)
 
         xsplit = (x[1:] + x[:-1]) / 2
         if self.randomize != 0.0:
             xsplit += (rand(len(x)-1) - 0.5) * (x[1:] - x[:-1]) * self.randomize
-        self.addpoints(compress(select.any(1),xsplit),xlims=xlims_arg)
+        self.addpoints(compress(select,xsplit),xlims=xlims_arg,internalcall=True)
 
     def refine_valuecut(self,value,xminstep=None):
         shifted = self.y - value
