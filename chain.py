@@ -194,12 +194,15 @@ class chain:
             S = None
         return chain(H,xyz,S=S)
 
-def square_ladder(N,gamma,do_cache=True):
+def square_ladder(N,gamma,gamma_perp=None,do_cache=True):
+    if gamma_perp == None:
+	gamma_perp = gamma
+	
     H = [ Matrix(zeros((N,N),'D')) for i in range(2) ]
 
     for n in range(1,N):
-        H[0][n-1,n] = -gamma
-        H[0][n,n-1] = -gamma
+        H[0][n-1,n] = -gamma_perp
+        H[0][n,n-1] = -gamma_perp
 
     for n in range(N):
         H[1][n,n] = -gamma
