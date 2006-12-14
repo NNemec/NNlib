@@ -105,7 +105,7 @@ def square_ladder(N):
     spacing = param.GRAPHENE_CC_DISTANCE
     res = chain((0,0,spacing))
     for n in range(N):
-        res.atoms.append(atom('C',(spacing*(n-(N-1)*0.5),0,0)),rot=eye(3))
+        res.atoms.append(atom('C',(spacing*(n-(N-1)*0.5),0,0),rot=eye(3)))
     return res
 
 def square_tube(N):
@@ -114,7 +114,7 @@ def square_tube(N):
     res = chain((0,0,spacing))
     for n in range(N):
         phi = 2*pi*n/N
-        res.atoms.append(atom('C',(cos(phi)*radius,sin(phi)*radius,0)),rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]])
+        res.atoms.append(atom('C',(cos(phi)*radius,sin(phi)*radius,0),rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]]))
     return res
 
 def linchain():
