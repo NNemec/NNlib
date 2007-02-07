@@ -74,7 +74,7 @@ class scan_adaptive:
         if self.y.shape[1] == 1:
 #            pytables.CArray(g,'y',self.y[:,0], filters=filters)
             ydata = pytables.CArray(g,'y',shape=self.x.shape,atom=xatom,filters=filters)
-            ydata[:] = self.y[:]
+            ydata[:] = self.y[:,0]
         else:
             yatom = pytables.Float64Atom(shape=self.y.shape, flavor="numpy")
 #           yatom = pytables.Float64Atom(shape=self.x.shape+(1,), flavor="numpy")
