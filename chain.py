@@ -107,9 +107,13 @@ class chain:
             if i > param.LOPEZ_SANCHO_MAXSTEPS:
                 raise "Lopez Sancho does not converge"
 
-        self._G_bulk = inv(epsilon)
-        self._Gs_L = inv(epsilon_L)
-        self._Gs_R = inv(epsilon_R)
+        G_bulk = inv(epsilon)
+        Gs_L = inv(epsilon_L)
+        Gs_R = inv(epsilon_R)
+
+        self._G_bulk = G_bulk
+        self._Gs_L = Gs_L
+	self._Gs_R = Gs_R
 
     def Gs_L(self,energy=None):
         self.set_energy(energy)
