@@ -473,9 +473,12 @@ class scan_adaptive:
                 x,
                 x[:1] + self.period,
             ))
+	    addyvals = y[:1,:]
+	    if hasattr(self,'totalpermut'):
+		addyvals = addyvals[:,self.totalpermut]
             y = concatenate((
                 y,
-                y[:1,:],
+                addyvals,
             ),axis=0)
 
         shifted = y - value
