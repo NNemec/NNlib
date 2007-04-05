@@ -1,8 +1,6 @@
 from calc import *
 
 import xyz
-import cnt
-import chain
 
 from param import param
 from units import *
@@ -127,7 +125,6 @@ class sheet:
         for i0,i1 in self.H:
             if (i0,i1) != (0,0):
                 res += adjsum(exp(1j*dot(ka,[i0,i1]))*self.H[i0,i1])
-#	print res
         return res
 
     def S_eff(self,ka):
@@ -139,17 +136,13 @@ class sheet:
         for i0,i1 in self.S:
             if (i0,i1) != (0,0):
                 res += adjsum(exp(1j*dot(ka,[i0,i1]))*self.S[i0,i1])
-#	print res
         return res
 
     def band_energies(self,ka):
-#	print
-#	print ka
         if hasattr(self,'S'):
             return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(ka),self.S_eff(ka))))))
         else:
             return array(sorted(list(real(eigvalsh(self.H_eff(ka))))))
-	
 
     def multiply(self,N0,N1):
         xyz = None
@@ -205,102 +198,3 @@ def graphene(gamma):
     H[0,1] = Matrix([[0j,-gamma],[0j,0j]])
     H[1,0] = Matrix([[0j,0j],[0j,-gamma]])
     return sheet(H)
-
-def tight_binding_1stNN_graphene(xyz_sheet):
-    N = len(xyz_sheet.atoms)
-    H = {}
-    H[0,0] = Matrix(zeros((N,N),'D'))
-
-    maxdist = param.GRAPHENE_CC_DISTANCE * 1.1
-    gamma = param.GRAPHENE_1STNN_HOPPING
-
-    for i in range(N):
-        for j in range(i+1,N):
-            if norm(xyz_sheet.atoms[i].pos - xyz_sheet.atoms[j].pos) < maxdist:
-                H[0,0][i,j] = -gamma
-                H[0,0][j,i] = -gamma
-
-    for i0,i1 in [(0,1),(1,1),(1,0),(1,-1)]:
-        shift = i0 * xyz_sheet.period[0] + i1 * xyz_sheet.period[1]
- #       print "shift: ",shift
-        H_hop = Matrix(zeros((N,N),'D'))
-        nonzero = False
-
-        for i in range(N):
-            for j in range(N):
-#                print xyz_sheet.atoms[i].pos - (xyz_sheet.atoms[j].pos + shift)
-                if norm(xyz_sheet.atoms[i].pos - (xyz_sheet.atoms[j].pos + shift)) < maxdist:
-                    H_hop[i,j] = -gamma
-                    nonzero = True
-        if nonzero:
-            H[i0,i1] = H_hop
- #       print
-
-    return sheet(H,xyz_sheet)
-
-
-def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
-    # based on the parametrization described in
-    # doi:10.1103/PhysRevB.64.121401
-
-    CC_DIST = param.GRAPHENE_CC_DISTANCE
-    NN_HOP = param.GRAPHENE_1STNN_HOPPING
-
-    TRIO_CUTOFF = param.TRIOZON_CUTOFF
-    Z_CUTOFF = param.TRIOZON_Z_CUTOFF
-    BETA = param.TRIOZON_BETA
-    A = param.TRIOZON_A
-    DELTA = param.TRIOZON_DELTA
-#    print "CUTOFF: ",TRIO_CUTOFF
-
-    def hopping(pos_a,pos_b):
-#        if abs(pos_a[2] - pos_b[2]) > Z_CUTOFF:
-#            return 0.0
-        if abs(pos_a[2] - pos_b[2]) < CC_DIST*0.1:
-            if norm(pos_a - pos_b) < CC_DIST*1.1:
-                return -NN_HOP
-        else:
-            d = norm(pos_b-pos_a);
-            if d < TRIO_CUTOFF:
-                return -BETA * exp((A - d)/DELTA)
-        return 0.0
-
-    x = xyz.merge(xyz_sheet_A,xyz_sheet_B)
-    at = x.atoms
-    period = x.period
-
-    Natoms = len(x.atoms)
-    H = {}
-    H[0,0] = Matrix(zeros((Natoms,Natoms),'D'))
-
-    for i in range(Natoms):
-        for j in range(i+1,Natoms):
-            hop = hopping(at[i].pos,at[j].pos)
-            if hop != 0.0:
-                H[0,0][i,j] = hop
-                H[0,0][j,i] = conj(hop)
-
-    for i0 in range(6):
-        for i1 in range(-6,6):
-            shift = i0 * period[0] + i1 * period[1]
-#            if norm(shift) > Z_CUTOFF + norm(period[0]) + norm(period[1]):
-#                continue
-            if i0 == 0 and i1 <= 0:
-                continue
-            h_hop = Matrix(zeros((Natoms,Natoms),'D'))
-            nonzero = False
-
-            x_shifted = x.shift(shift)
-            at_sh = x_shifted.atoms
-
-            for i in range(Natoms):
-                for j in range(Natoms):
-                    hop = hopping(at[i].pos,at_sh[j].pos)
-                    if hop != 0.0:
-                        h_hop[i,j] = hop
-                        nonzero = True
-            if nonzero:
-                assert norm(shift) <= Z_CUTOFF + norm(period[0]) + norm(period[1])
-                H[i0,i1] = h_hop
-
-    return sheet(H,x)

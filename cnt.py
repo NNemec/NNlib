@@ -7,7 +7,6 @@ import xyz
 
 param.createdefault("GRAPHENE_CC_DISTANCE", 1.4226*angstrom)
 param.createdefault("GRAPHITE_INTERLAYER_DISTANCE", 3.44*angstrom)
-param.createdefault("GRAPHENE_1STNN_HOPPING", 2.66*eV)
 
 def SDOS_armchair_analytic(
     E, # in units of gamma
