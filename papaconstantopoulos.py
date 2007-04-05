@@ -11,10 +11,8 @@ class papa:
         def readval(name=None):
             line = f.readline()
             line = re.sub(r'\{(.*) (.*)\}',r'{\1-\2}',line)
-#           print line
             vals = line.split()
             if name is not None:
-#                print vals[3],name
                 assert vals[3] == name.split()[0]
             val = float(vals[0])
             return val
@@ -64,10 +62,12 @@ class papa:
 
         f.close()
 
+
     def cutoff(self,R):
         if R>(self.rcut+5*self.screenl):
             return 0.0
         return 1./(1+exp((R-self.rcut)/self.screenl))
+
 
     def calc_pair_SK(self,R):
         if R > (self.rcut+5*self.screenl):
@@ -83,10 +83,10 @@ class papa:
         h_ppp = (self.a_ppp + self.b_ppp*R + self.c_ppp*R**2)*exp(-self.d_ppp**2*R)*cutoff
 
         h_sk = matrix([
-            [h_sss,h_sps, 0.0 , 0.0 ],
-            [h_sps,h_pps, 0.0 , 0.0 ],
-            [ 0.0 , 0.0 ,h_ppp, 0.0 ],
-            [ 0.0 , 0.0 , 0.0 ,h_ppp],
+            [h_sss,-h_sps, 0.0 , 0.0 ],
+            [h_sps, h_pps, 0.0 , 0.0 ],
+            [ 0.0 ,  0.0 ,h_ppp, 0.0 ],
+            [ 0.0 ,  0.0 , 0.0 ,h_ppp],
         ])
 
         s_sss = (1 + self.p_sss*R + self.q_sss*R**2 + self.r_sss*R**3)*exp(-self.s_sss**2*R)*cutoff
@@ -95,10 +95,10 @@ class papa:
         s_ppp = (1 + self.p_ppp*R + self.q_ppp*R**2 + self.r_ppp*R**3)*exp(-self.s_ppp**2*R)*cutoff
 
         s_sk = matrix([
-            [s_sss,s_sps, 0.0 , 0.0 ],
-            [s_sps,s_pps, 0.0 , 0.0 ],
-            [ 0.0 , 0.0 ,s_ppp, 0.0 ],
-            [ 0.0 , 0.0 , 0.0 ,s_ppp],
+            [s_sss,-s_sps, 0.0 , 0.0 ],
+            [s_sps, s_pps, 0.0 , 0.0 ],
+            [ 0.0 ,  0.0 ,s_ppp, 0.0 ],
+            [ 0.0 ,  0.0 , 0.0 ,s_ppp],
         ])
 
         return drho, h_sk, s_sk
@@ -131,15 +131,15 @@ class papa:
         return drho, U4 * h_sk * U4.T, U4 * s_sk * U4.T
 
 
-    def setup_chain(self,xyz,do_cache=True):
+    def setup_chain(self,xyz_chain,do_cache=True):
         from chain import chain
 
-        at = xyz.atoms
+        at = xyz_chain.atoms
         for a in at:
             a.rot4 = matrix(eye(4))
             a.rot4[1:4,1:4] = a.rot
 
-        period = xyz.period
+        period = xyz_chain.period
 
         Natoms = len(xyz.atoms)
 
@@ -147,11 +147,11 @@ class papa:
         H = []
         S = []
         for n in range(20):
-            at_sh = xyz.shift(period*n).atoms
+            at_sh = xyz_chain.shift(period*n).atoms
 
             h = matrix(zeros((4*Natoms,4*Natoms),'D'))
             s = matrix(zeros((4*Natoms,4*Natoms),'D'))
-            is_empty = True
+            nonzero = False
             for i in range(Natoms):
                 for j in range(Natoms):
                     if n==0 and i>=j:
@@ -162,27 +162,27 @@ class papa:
                     drho, h_xyz, s_xyz = self.calc_pair_HS(Rvec)
                     if drho is None:
                         continue
-                    is_empty = False
+                    nonzero = True
 
-#                    rho[i] += drho
-#                    rho[j] += drho
+                    rho[i] += drho
+                    rho[j] += drho
 
-                    h[4*i:4*(i+1),4*j:4*(j+1)] = at[i].rot4.T * h_xyz * at[j].rot4
-                    s[4*i:4*(i+1),4*j:4*(j+1)] = at[i].rot4.T * s_xyz * at[j].rot4
+                    h[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
+                    s[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
 
-            if is_empty:
+            if not nonzero:
                 break
             H.append(h)
             S.append(s)
 
         for i in range(Natoms):
-#             rho3 = rho[i]**(1/3.)
-#             h_s = self.alpha_s + self.beta_s * rho3**2 + self.gamma_s * rho3**4 + self.chi_s * rho3**6
-#             h_p = self.alpha_p + self.beta_p * rho3**2 + self.gamma_p * rho3**4 + self.chi_p * rho3**6
-#             H[0][4*i,4*i] = h_s
-#             H[0][4*i+1,4*i+1] = h_p
-#             H[0][4*i+2,4*i+2] = h_p
-#             H[0][4*i+3,4*i+3] = h_p
+            rho3 = rho[i]**(1/3.)
+            h_s = self.alpha_s + self.beta_s * rho3**2 + self.gamma_s * rho3**4 + self.chi_s * rho3**6
+            h_p = self.alpha_p + self.beta_p * rho3**2 + self.gamma_p * rho3**4 + self.chi_p * rho3**6
+            H[0][4*i,4*i] = h_s
+            H[0][4*i+1,4*i+1] = h_p
+            H[0][4*i+2,4*i+2] = h_p
+            H[0][4*i+3,4*i+3] = h_p
 
             S[0][4*i,4*i] = 1.0
             S[0][4*i+1,4*i+1] = 1.0
@@ -190,22 +190,32 @@ class papa:
             S[0][4*i+3,4*i+3] = 1.0
 
             for j in range(i):
-                H[0][4*i:4*(i+1),4*j:4*(j+1)] = transpose(H[0][4*j:4*(j+1),4*i:4*(i+1)])
-                S[0][4*i:4*(i+1),4*j:4*(j+1)] = transpose(S[0][4*j:4*(j+1),4*i:4*(i+1)])
+                H[0][4*i:4*i+4,4*j:4*j+4] = H[0][4*j:4*(j+1),4*i:4*(i+1)].H
+                S[0][4*i:4*i+4,4*j:4*j+4] = S[0][4*j:4*(j+1),4*i:4*(i+1)].H
 
-        return chain(H,S=S,xyz_chain=xyz,do_cache=do_cache)
+#       for i in range(len(H)):
+#           H[i] = H[i][2::4,2::4]
+#           S[i] = S[i][2::4,2::4]
+
+#        return chain(H,S=S,xyz_chain=xyz,do_cache=do_cache)
+        return chain(H,S=S,do_cache=do_cache)
 
 
-    def setup_sheet(self,xyz_sheet):
+    def setup_sheet(self,xyz_sheet,do_cache=True):
         from sheet import sheet
 
         at = xyz_sheet.atoms
+        for a in at:
+            a.rot4 = matrix(eye(4))
+            a.rot4[1:4,1:4] = a.rot
+
         N = len(at)
         H = {}
         S = {}
-        H[0,0] = matrix(zeros((4*N,4*N),'D'))
-        S[0,0] = matrix(eye(4*N))
+        rho = zeros((N,),'d')
 
+        H[0,0] = matrix(zeros((4*N,4*N),'D'))
+        S[0,0] = matrix(zeros((4*N,4*N),'D'))
         for i in range(N):
             for j in range(i+1,N):
                 Rvec = at[i].pos - at[j].pos
@@ -214,17 +224,12 @@ class papa:
                 if drho is None:
                     continue
 
-                H[0,0][4*i:4*i+4,4*j:4*j+4] = h_xyz
-                S[0,0][4*i:4*i+4,4*j:4*j+4] = s_xyz
+                rho[i] += drho
+                rho[j] += drho
 
-                H[0,0][4*j:4*j+4,4*i:4*i+4] = transpose(h_xyz)
-                S[0,0][4*j:4*j+4,4*i:4*i+4] = transpose(s_xyz)
+                H[0,0][4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
+                S[0,0][4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
 
-#                H[0,0][4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
-#                S[0,0][4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
-
-#                H[0,0][4*j:4*j+4,4*i:4*i+4] = transpose(at[i].rot4.T * h_xyz * at[j].rot4)
-#                S[0,0][4*j:4*j+4,4*i:4*i+4] = transpose(at[i].rot4.T * s_xyz * at[j].rot4)
 
         for i0 in range(6):
             for i1 in range(-6,6):
@@ -245,14 +250,37 @@ class papa:
                         Rvec = at[i].pos - at_sh[j].pos
                         drho, h_xyz, s_xyz = self.calc_pair_HS(Rvec)
 
-                        if drho is not None:
-                            h_hop[4*i:4*i+4,4*j:4*j+4] = h_xyz
-                            s_hop[4*i:4*i+4,4*j:4*j+4] = s_xyz
-#                            h_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
-#                            s_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
-                            nonzero = True
+                        if drho is None:
+                            continue
+                        nonzero = True
+
+                        h_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
+                        s_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
                 if nonzero:
                     H[i0,i1] = h_hop
                     S[i0,i1] = s_hop
 
-        return sheet(H) # ,xyz_sheet)
+        for i in range(N):
+            rho3 = rho[i]**(1/3.)
+            h_s = self.alpha_s + self.beta_s * rho3**2 + self.gamma_s * rho3**4 + self.chi_s * rho3**6
+            h_p = self.alpha_p + self.beta_p * rho3**2 + self.gamma_p * rho3**4 + self.chi_p * rho3**6
+            H[0,0][4*i,4*i] = h_s
+            H[0,0][4*i+1,4*i+1] = h_p
+            H[0,0][4*i+2,4*i+2] = h_p
+            H[0,0][4*i+3,4*i+3] = h_p
+
+            S[0,0][4*i,4*i] = 1.0
+            S[0,0][4*i+1,4*i+1] = 1.0
+            S[0,0][4*i+2,4*i+2] = 1.0
+            S[0,0][4*i+3,4*i+3] = 1.0
+
+            for j in range(i):
+                H[0,0][4*i:4*(i+1),4*j:4*(j+1)] = H[0,0][4*j:4*(j+1),4*i:4*(i+1)].H
+                S[0,0][4*i:4*(i+1),4*j:4*(j+1)] = S[0,0][4*j:4*(j+1),4*i:4*(i+1)].H
+
+#       for k in H:
+#           H[k] = H[k][3::4,3::4]
+#           S[k] = S[k][3::4,3::4]
+
+#        return chain(H,S=S,xyz_sheet=xyz_sheet,do_cache=do_cache)
+        return sheet(H,S=S,do_cache=do_cache)

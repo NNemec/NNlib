@@ -113,7 +113,7 @@ class chain:
 
         self._G_bulk = G_bulk
         self._Gs_L = Gs_L
-	self._Gs_R = Gs_R
+        self._Gs_R = Gs_R
 
     def Gs_L(self,energy=None):
         self.set_energy(energy)
@@ -129,16 +129,20 @@ class chain:
 
     def H_eff(self,k):
         res = self.H[0] + 0.0
+        def adjsum(a):
+            return a + a.H
         for i in range(1,len(self.H)):
-            res += exp(1j*k*i)*self.H[i] + exp(-1j*k*i)*adj(self.H[i])
+            res += adjsum(exp(1j*k*i)*self.H[i])
         return res
 
     def S_eff(self,k):
         if not hasattr(self,'S'):
             return None
-        res = self.S[0] + 0.0
+        res = self.S[0].copy()
+        def adjsum(a):
+            return a + a.H
         for i in range(1,len(self.S)):
-            res += exp(1j*k*i)*self.S[i] + exp(-1j*k*i)*adj(self.S[i])
+            res += adjsum(exp(1j*k*i)*self.S[i])
         return res
 
     def band_energies(self,k):
@@ -200,8 +204,8 @@ class chain:
 
 def square_ladder(N,gamma,gamma_perp=None,do_cache=True):
     if gamma_perp == None:
-	gamma_perp = gamma
-	
+        gamma_perp = gamma
+
     H = [ Matrix(zeros((N,N),'D')) for i in range(2) ]
 
     for n in range(1,N):

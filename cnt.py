@@ -37,11 +37,11 @@ def armchair(N):
     res.radius = r
 
     def addatom(rho,phi,z):
-	res.atoms.append(xyz.atom('C',
-	    pos=(rho*cos(phi),rho*sin(phi),z),
-	    rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]],
-	))
-	    
+        res.atoms.append(xyz.atom('C',
+            pos=(rho*cos(phi),rho*sin(phi),z),
+            rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]],
+        ))
+
     for n in range(N):
         addatom(r,2*pi*(6*n  )/(6*N),period/2)
         addatom(r,2*pi*(6*n+1)/(6*N),0)
@@ -61,11 +61,11 @@ def zigzag(N):
     res.radius = r
 
     def addatom(rho,phi,z):
-	res.atoms.append(xyz.atom('C',
-	    pos=(rho*cos(phi),rho*sin(phi),z),
-	    rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]],
-	))
-	    
+        res.atoms.append(xyz.atom('C',
+            pos=(rho*cos(phi),rho*sin(phi),z),
+            rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]],
+        ))
+
     for n in range(N):
         addatom(r,2*pi*(2*n  )/(2*N),period/6)
         addatom(r,2*pi*(2*n  )/(2*N),period/2)
@@ -172,10 +172,10 @@ def chiral(M,N):
     res = xyz.chain((0,0,period))
     res.radius = r
     def addatom(rho,phi,z):
-	res.atoms.append(xyz.atom('C',
-	    pos=(rho*cos(phi),rho*sin(phi),z),
-	    rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]],
-	))
+        res.atoms.append(xyz.atom('C',
+            pos=(rho*cos(phi),rho*sin(phi),z),
+            rot=[[cos(phi),-sin(phi),0],[sin(phi),cos(phi),0],[0,0,1]],
+        ))
 
     n = 0
     for l in range(Nlines):
@@ -219,7 +219,7 @@ def grapheneribbon(M,N):
         minx = min(minx,a.pos[0])
         maxx = max(maxx,a.pos[0])
         a.pos[1] = 0
-	a.rot = asmatrix(eye(3))
+        a.rot = asmatrix(eye(3))
     for a in cnt.atoms:
         a.pos[0] -= (maxx+minx)*0.5
     return cnt
@@ -257,4 +257,3 @@ if __name__ == "__main__":
         zigzag(10).write_xyz_file('cnt-test-zigzag.xyz')
         armchair(10).write_xyz_file('cnt-test-armchair.xyz')
         chiral(5,4).write_xyz_file('cnt-test-chiral.xyz')
-

@@ -8,7 +8,7 @@ from param import param
 from units import *
 
 class sheet:
-    def __init__(self,H_B0,xyz_sheet=None):
+    def __init__(self,H_B0,xyz_sheet=None,S=None):
         assert type(H_B0) is dict
         assert (0,0) in H_B0
         assert type(H_B0[0,0]) is matrix
@@ -25,6 +25,14 @@ class sheet:
 
         self.H_B0 = H_B0
         self.H = H_B0
+
+        if S is not None:
+            assert type(S) is dict
+            assert S.keys() == H_B0.keys()
+            for k in S:
+                assert type(S[k]) is matrix
+                assert S[k].shape == (self.N_atoms,self.N_atoms)
+            self.S = S
 
         if xyz_sheet is not None:
             assert isinstance(xyz_sheet,xyz.sheet)
@@ -55,7 +63,7 @@ class sheet:
                 self.H = self.H_B0
             else:
                 if self.latticecoords is None:
-		    self.latticecoords = [ (dot(at.pos,self.xyz.rzp[0]) , dot(at.pos,self.xyz.rzp[1]) ) for at in self.xyz.atoms ]
+                    self.latticecoords = [ (dot(at.pos,self.xyz.rzp[0]) , dot(at.pos,self.xyz.rzp[1]) ) for at in self.xyz.atoms ]
 
                 self.H = deepcopy(self.H_B0)
                 assert all(bfield[:2] == 0.) # bfield perpendicular to sheet
@@ -66,16 +74,16 @@ class sheet:
                     # linear gauge:
                     # phase = (d[1] - s[1]) * (d[0] + s[0]) * .5
 
-		    shiftx,shifty = shift
+                    shiftx,shifty = shift
 
-		    si = int(s[0] // 1)
-		    sr = s[0] % 1
-		    sx = si+sr
-		    sy = s[1]
-		    di = int(d[0] // 1) + shiftx
-		    dr = d[0] % 1
-		    dx = di+dr
-		    dy = d[1] + shifty
+                    si = int(s[0] // 1)
+                    sr = s[0] % 1
+                    sx = si+sr
+                    sy = s[1]
+                    di = int(d[0] // 1) + shiftx
+                    dr = d[0] % 1
+                    dx = di+dr
+                    dy = d[1] + shifty
 
                     # forced gauge:
                     if dx == sx:
@@ -115,14 +123,33 @@ class sheet:
     def H_eff(self,ka):
         res = self.H[0,0] + 0.0
         def adjsum(a):
-            return a + adj(a)
+            return a + a.H
         for i0,i1 in self.H:
             if (i0,i1) != (0,0):
                 res += adjsum(exp(1j*dot(ka,[i0,i1]))*self.H[i0,i1])
+#	print res
+        return res
+
+    def S_eff(self,ka):
+        if not hasattr(self,'S'):
+            return None
+        res = self.S[0,0].copy()
+        def adjsum(a):
+            return a + a.H
+        for i0,i1 in self.S:
+            if (i0,i1) != (0,0):
+                res += adjsum(exp(1j*dot(ka,[i0,i1]))*self.S[i0,i1])
+#	print res
         return res
 
     def band_energies(self,ka):
-        return array(sorted(list(real(eigvalsh(self.H_eff(ka))))))
+#	print
+#	print ka
+        if hasattr(self,'S'):
+            return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(ka),self.S_eff(ka))))))
+        else:
+            return array(sorted(list(real(eigvalsh(self.H_eff(ka))))))
+	
 
     def multiply(self,N0,N1):
         xyz = None
@@ -273,7 +300,7 @@ def tight_binding_graphite_triozon(xyz_sheet_A,xyz_sheet_B):
                         h_hop[i,j] = hop
                         nonzero = True
             if nonzero:
-		assert norm(shift) <= Z_CUTOFF + norm(period[0]) + norm(period[1])
+                assert norm(shift) <= Z_CUTOFF + norm(period[0]) + norm(period[1])
                 H[i0,i1] = h_hop
 
     return sheet(H,x)
