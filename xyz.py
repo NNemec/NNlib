@@ -13,17 +13,18 @@ class atom:
 	    assert self.rot.shape == (3,3)
 
     def shift(self,disp):
-        return atom(self.typ,self.pos+disp)
+	res = deepcopy(self)
+	res.pos += disp
+        return res
 
     def rotate(self,rot):
+	res = deepcopy(self)
 	rot = asarray(rot)
         assert rot.shape == (3,3)
-	pos = dot(rot,self.pos)
+	res.pos = dot(rot,self.pos)
 	if hasattr(self,'rot'):
-	    rot = dot(rot,self.rot)
-	else:
-	    rot = None
-        return atom(self.typ,pos=pos,rot=rot)
+	    res.rot = dot(rot,self.rot)
+        return res
 
 class structure:
     def __init__(self):
@@ -32,7 +33,7 @@ class structure:
     def shift(self,disp):
         res = deepcopy(self)
         for i in range(len(res.atoms)):
-            res.atoms[i] = res.atoms[i].shift(disp)
+            res.atoms[i].pos = res.atoms[i].pos + disp
         return res
 
     def rotate(self,rot):

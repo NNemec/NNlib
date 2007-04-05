@@ -6,7 +6,7 @@ from param import param
 from units import *
 
 class sheet:
-    def __init__(self,H_B0,xyz_sheet=None,S=None):
+    def __init__(self,H_B0,xyz_sheet=None,S=None,do_cache=False):
         assert type(H_B0) is dict
         assert (0,0) in H_B0
         assert type(H_B0[0,0]) is matrix

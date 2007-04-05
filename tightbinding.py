@@ -2,7 +2,8 @@
 
 import xyz, cnt, chain, sheet
 from param import param
-
+from units import *
+from calc import *
 
 param.createdefault("GRAPHENE_1STNN_HOPPING", 2.66*eV)
 
@@ -85,7 +86,7 @@ def tight_binding_triozon(xyz_coords,do_cache=True,graphite=False):
     at = xyz_coords.atoms
     period = xyz_coords.period
 
-    N = len(at)
+    Natoms = len(at)
 
     if isinstance(xyz_coords,xyz.chain):
         if graphite:
@@ -126,10 +127,10 @@ def tight_binding_triozon(xyz_coords,do_cache=True,graphite=False):
             return 0.0
 
     if isinstance(xyz_coords,xyz.chain):
-        H = [ matrix(zeros((N,N),'D')) ]
+        H = [ matrix(zeros((Natoms,Natoms),'D')) ]
 
-        for i in range(N):
-            for j in range(i+1,N):
+        for i in range(Natoms):
+            for j in range(i+1,Natoms):
                 hop = hopping(at[i].pos,at[j].pos)
                 if hop != 0.0:
                     H[0][i,j] = hop
@@ -168,6 +169,8 @@ def tight_binding_triozon(xyz_coords,do_cache=True,graphite=False):
             for i1 in range(-6,6):
                 if i0 == 0 and i1 <= 0:
                     continue
+                shift = i0 * period[0] + i1 * period[1]
+
                 H_hop = matrix(zeros((Natoms,Natoms),'D'))
                 nonzero = False
 

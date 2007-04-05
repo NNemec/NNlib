@@ -82,7 +82,7 @@ def is_metallic(M,N):
     return ((M-N)%3 == 0)
 
 A_plaquette = a**2 * 3**.5 * 1.5
-v_F = 1.5*param.GRAPHENE_CC_DISTANCE*param.GRAPHENE_1STNN_HOPPING
+# v_F = 1.5*param.GRAPHENE_CC_DISTANCE*param.GRAPHENE_1STNN_HOPPING
 
 def radius(M,N):
     assert M >= 0

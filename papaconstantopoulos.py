@@ -140,8 +140,7 @@ class papa:
             a.rot4[1:4,1:4] = a.rot
 
         period = xyz_chain.period
-
-        Natoms = len(xyz.atoms)
+        Natoms = len(at)
 
         rho = zeros((Natoms,),'d')
         H = []
@@ -209,15 +208,17 @@ class papa:
             a.rot4 = matrix(eye(4))
             a.rot4[1:4,1:4] = a.rot
 
-        N = len(at)
+        period = xyz_sheet.period
+        Natoms = len(at)
+
         H = {}
         S = {}
-        rho = zeros((N,),'d')
+        rho = zeros((Natoms,),'d')
 
-        H[0,0] = matrix(zeros((4*N,4*N),'D'))
-        S[0,0] = matrix(zeros((4*N,4*N),'D'))
-        for i in range(N):
-            for j in range(i+1,N):
+        H[0,0] = matrix(zeros((4*Natoms,4*Natoms),'D'))
+        S[0,0] = matrix(zeros((4*Natoms,4*Natoms),'D'))
+        for i in range(Natoms):
+            for j in range(i+1,Natoms):
                 Rvec = at[i].pos - at[j].pos
 
                 drho, h_xyz, s_xyz = self.calc_pair_HS(Rvec)
@@ -236,18 +237,15 @@ class papa:
                 if i0 == 0 and i1 <= 0:
                     continue
 
-                h_hop = matrix(zeros((4*N,4*N),'D'))
-                s_hop = matrix(zeros((4*N,4*N),'D'))
+                h_hop = matrix(zeros((4*Natoms,4*Natoms),'D'))
+                s_hop = matrix(zeros((4*Natoms,4*Natoms),'D'))
                 nonzero = False
 
-                shift = i0 * xyz_sheet.period[0] + i1 * xyz_sheet.period[1]
+                shift = i0 * period[0] + i1 * period[1]
 
-                x_shifted = xyz_sheet.shift(shift)
-                at_sh = x_shifted.atoms
-
-                for i in range(N):
-                    for j in range(N):
-                        Rvec = at[i].pos - at_sh[j].pos
+                for i in range(Natoms):
+                    for j in range(Natoms):
+                        Rvec = at[i].pos - (at[j].pos + shift)
                         drho, h_xyz, s_xyz = self.calc_pair_HS(Rvec)
 
                         if drho is None:
@@ -260,7 +258,7 @@ class papa:
                     H[i0,i1] = h_hop
                     S[i0,i1] = s_hop
 
-        for i in range(N):
+        for i in range(Natoms):
             rho3 = rho[i]**(1/3.)
             h_s = self.alpha_s + self.beta_s * rho3**2 + self.gamma_s * rho3**4 + self.chi_s * rho3**6
             h_p = self.alpha_p + self.beta_p * rho3**2 + self.gamma_p * rho3**4 + self.chi_p * rho3**6
