@@ -10,16 +10,15 @@ param.createdefault("LOPEZ_SANCHO_MAXSTEPS", 100)
 class chain:
     def __init__(self,H_B0,xyz_chain=None,do_cache=True,S=None):
         assert type(H_B0) is list
-        self.N_atoms = H_B0[0].shape[0]
+        self.N_orbitals = H_B0[0].shape[0]
         for h_b0 in H_B0:
             assert type(h_b0) is matrix
-            assert h_b0.shape == (self.N_atoms,self.N_atoms)
+            assert h_b0.shape == (self.N_orbitals,self.N_orbitals)
         self.H = H_B0
         self.H_B0 = H_B0
 
-        if xyz_chain is not None and len(xyz_chain.atoms) == self.N_atoms:
+        if xyz_chain is not None:
             assert isinstance(xyz_chain,xyz.chain)
-            assert len(xyz_chain.atoms) == self.N_atoms
             self.xyz = xyz_chain
             self.xyz_shifted = [ xyz_chain.shift(xyz_chain.period * i) for i in range(1,len(H_B0)) ]
             self.bfield = array((0,0,0))
@@ -27,7 +26,7 @@ class chain:
         if S is not None:
             for s in S:
                 assert type(s) is matrix
-                assert s.shape == (self.N_atoms,self.N_atoms)
+                assert s.shape == (self.N_orbitals,self.N_orbitals)
             self.S = S
 
         self.energy = None
@@ -39,6 +38,7 @@ class chain:
     def set_bfield(self,bfield):
         import bfield as bf
         assert hasattr(self,'xyz')
+        assert len(self.xyz.atoms) == self.N_orbitals
         if any(bfield != self.bfield):
             self.bfield = bfield
             if sum(array(self.bfield)**2) == 0:
@@ -69,13 +69,14 @@ class chain:
                     self.cache[self.energy] = (self._G_bulk,self._Gs_L,self._Gs_R)
 
     def _do_calc_lopez_sancho(self):
+        assert not hasattr(self,'S')
+        assert len(self.H) == 2
+
         # ToDo: find documentation (Lopez-Sancho)
-        E = (self.energy+1j*param.LOPEZ_SANCHO_ETA) * Matrix(eye(self.N_atoms))
+        E = (self.energy+1j*param.LOPEZ_SANCHO_ETA) * Matrix(eye(self.N_orbitals))
 
         # alpha = energy*S_hop - chain.H_hop;
         # beta = energy*chain.S_hop' - chain.H_hop';
-        assert len(self.H) == 2
-        assert not hasattr(self,'S')
         alpha = - self.H[1]
         beta = - adj(self.H[1])
         epsilon = E - self.H[0]
@@ -143,20 +144,20 @@ class chain:
             return array(sorted(list(real(eigvalsh(self.H_eff(k))))))
 
     def DOS(self,energy=None):
-        return -1./pi*imag(trace(self.G_bulk(energy)))/self.N_atoms
+        return -1./pi*imag(trace(self.G_bulk(energy)))/self.N_orbitals
 
     def LDOS(self,energy=None):
         return -1./pi*imag(diag(self.G_bulk(energy)))
 
     def SDOS_L(self,energy=None):
-        return -1./pi*imag(trace(self.Gs_L(energy)))/self.N_atoms
+        return -1./pi*imag(trace(self.Gs_L(energy)))/self.N_orbitals
 
     def SDOS_R(self,energy=None):
-        return -1./pi*imag(trace(self.Gs_L(energy)))/self.N_atoms
+        return -1./pi*imag(trace(self.Gs_L(energy)))/self.N_orbitals
 
     def transmission(self,energy=None):
         self.set_energy(energy)
-        E = (self.energy+1j*param.LOPEZ_SANCHO_ETA)*Matrix(eye(self.N_atoms))
+        E = (self.energy+1j*param.LOPEZ_SANCHO_ETA)*Matrix(eye(self.N_orbitals))
         Sigma_L = adj(self.H[1])*self.Gs_L()*self.H[1]
         Sigma_R = self.H[1]*self.Gs_R()*adj(self.H[1])
         Gamma_L = 1j*(Sigma_L-adj(Sigma_L))
@@ -166,7 +167,7 @@ class chain:
 
     def multiply(self,N):
         xyz = None
-        A = self.N_atoms
+        A = self.N_orbitals
         if hasattr(self,'xyz'):
             xyz = self.xyz.multiply(N)
         assert len(self.H_B0) <= N+1

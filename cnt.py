@@ -6,7 +6,7 @@ from param import param
 import xyz
 
 param.createdefault("GRAPHENE_CC_DISTANCE", 1.4226*angstrom)
-param.createdefault("GRAPHITE_INTERLAYER_DISTANCE", 3.44*angstrom)
+param.createdefault("GRAPHITE_INTERLAYER_DISTANCE", 3.34*angstrom)
 
 def SDOS_armchair_analytic(
     E, # in units of gamma
@@ -230,6 +230,47 @@ def graphene():
         xyz.atom('C',(0.,.5*dCC,0.),eye(3)),
         xyz.atom('C',(0.,-.5*dCC,0.),eye(3)),
     ])
+    return res
+
+def graphene_supercell(M,N):
+    assert M >= 0 and N >= 0
+
+    d_CC = param.GRAPHENE_CC_DISTANCE
+    a = d_CC * 3**.5     # length of a graphene lattice vector
+    l_x = a * (M**2 + N**2 + M*N)**0.5 # circumference of the tube
+#    rho = l_circ / (2*pi) # radius of the tube
+    Q = gcd(M+2*N,2*M+N)
+    l_y = a * (3.0 * (M**2 + N**2 + M*N))**0.5 / Q # length of one unit cell
+    N_atoms = 4 * (M**2 + N**2 + M*N) / Q # number of atoms per unit cell
+    M_perp = (M+2*N) / Q   # periodic vector in lattice coordinates
+    N_perp = - (2*M+N) / Q #
+
+    # graphene lattice vectors in real coordinates (x,y):
+    a_1 = array([l_x*N_perp , -l_y*N]) / (M*N_perp - M_perp*N)
+    a_2 = array([l_x*M_perp , -l_y*M]) / (N*M_perp - N_perp*M)
+
+    res = xyz.sheet([[l_x,0,0],[0,l_y,0]])
+    coords = []
+
+    for i in range(0,M+N):
+        # integer division always rounds to lower value (i.e.: (a/b)*b <= a )
+        # we need to round up, so we do -((-a)/b)
+        j_min = -((-(i*M))/(M+N))
+        assert (j_min-1) * (M+N) < i*M <= j_min * (M+N)
+        j_max = -((-(i*M + M_perp*N - M*N_perp))/(M+N))
+        assert (j_max-1) * (M+N) < (i*M + M_perp*N - M*N_perp) <= j_max * (M+N)
+
+        for j in range(j_min,j_max):
+            for offset in [(a_1 + a_2)/3,(a_1 + a_2)*2/3]:
+                x,y = j*a_1 + (i-j)*a_2 + offset
+                x %= l_x
+                y %= l_y
+                res.atoms.extend([
+                    xyz.atom('C',(x,y,0),eye(3)),
+                ])
+
+    assert len(res.atoms) == N_atoms
+
     return res
 
 if __name__ == "__main__":

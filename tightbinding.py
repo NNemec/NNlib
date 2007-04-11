@@ -319,8 +319,6 @@ class papaconstantopoulos:
 
 
     def setup_chain(self,xyz_chain,do_cache=True):
-        from chain import chain
-
         at = xyz_chain.atoms
         for a in at:
             a.rot4 = matrix(eye(4))
@@ -383,13 +381,10 @@ class papaconstantopoulos:
 #           H[i] = H[i][2::4,2::4]
 #           S[i] = S[i][2::4,2::4]
 
-#        return chain(H,S=S,xyz_chain=xyz,do_cache=do_cache)
-        return chain(H,S=S,do_cache=do_cache)
+        return chain.chain(H,S=S,xyz_chain=xyz,do_cache=do_cache)
 
 
     def setup_sheet(self,xyz_sheet,do_cache=True):
-        from sheet import sheet
-
         at = xyz_sheet.atoms
         for a in at:
             a.rot4 = matrix(eye(4))
@@ -467,6 +462,5 @@ class papaconstantopoulos:
 #           H[k] = H[k][3::4,3::4]
 #           S[k] = S[k][3::4,3::4]
 
-#        return chain(H,S=S,xyz_sheet=xyz_sheet,do_cache=do_cache)
-        return sheet(H,S=S,do_cache=do_cache)
+        return sheet.sheet(H,S=S,xyz_sheet=xyz_sheet,do_cache=do_cache)
 

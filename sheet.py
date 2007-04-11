@@ -10,7 +10,7 @@ class sheet:
         assert type(H_B0) is dict
         assert (0,0) in H_B0
         assert type(H_B0[0,0]) is matrix
-        self.N_atoms = H_B0[0,0].shape[0]
+        self.N_orbitals = H_B0[0,0].shape[0]
         self.imax = 0
         for i0,i1 in H_B0:
             assert type(i0) is int
@@ -19,7 +19,7 @@ class sheet:
             assert i0 > 0 or i1 >= 0
             self.imax = max(self.imax,i0,i1,-i1)
             assert type(H_B0[i0,i1]) is matrix
-            assert H_B0[i0,i1].shape == (self.N_atoms,self.N_atoms)
+            assert H_B0[i0,i1].shape == (self.N_orbitals,self.N_orbitals)
 
         self.H_B0 = H_B0
         self.H = H_B0
@@ -29,12 +29,11 @@ class sheet:
             assert S.keys() == H_B0.keys()
             for k in S:
                 assert type(S[k]) is matrix
-                assert S[k].shape == (self.N_atoms,self.N_atoms)
+                assert S[k].shape == (self.N_orbitals,self.N_orbitals)
             self.S = S
 
         if xyz_sheet is not None:
             assert isinstance(xyz_sheet,xyz.sheet)
-            assert len(xyz_sheet.atoms) == self.N_atoms
             self.xyz = xyz_sheet
             self.latticecoords = None
             self.bfield = array((0,0,0))
@@ -146,16 +145,16 @@ class sheet:
 
     def multiply(self,N0,N1):
         xyz = None
-        Nat = self.N_atoms
+        N_orb = self.N_orbitals
         if hasattr(self,'xyz'):
             xyz = self.xyz.multiply(N0,N1)
         H = {}
-        H[0,0] = Matrix(zeros((N0*N1*Nat,N0*N1*Nat),'D'))
+        H[0,0] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),'D'))
         for n0 in range(N0):
             for n1 in range(N1):
                 H[0,0][
-                    (n0*N1+n1)*Nat:(n0*N1+n1+1)*Nat,
-                    (n0*N1+n1)*Nat:(n0*N1+n1+1)*Nat,
+                    (n0*N1+n1)*N_orb:(n0*N1+n1+1)*N_orb,
+                    (n0*N1+n1)*N_orb:(n0*N1+n1+1)*N_orb,
                 ] = self.H[0,0]
                 for i0,i1 in self.H:
                     if (i0,i1) == (0,0):
@@ -165,22 +164,22 @@ class sheet:
                     i1n = (n1+i1) // N1
                     if i0n > 0 or (i0n == 0 and i1n >= 0):
                         if (i0n,i1n) not in H:
-                            H[i0n,i1n] = Matrix(zeros((N0*N1*Nat,N0*N1*Nat),'D'))
+                            H[i0n,i1n] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),'D'))
 
                         H[i0n,i1n][
-                            (n0*N1+n1)*Nat:(n0*N1+n1+1)*Nat,
-                            ((n0+i0)%N0*N1+(n1+i1)%N1)*Nat:((n0+i0)%N0*N1+(n1+i1)%N1+1)*Nat,
+                            (n0*N1+n1)*N_orb:(n0*N1+n1+1)*N_orb,
+                            ((n0+i0)%N0*N1+(n1+i1)%N1)*N_orb:((n0+i0)%N0*N1+(n1+i1)%N1+1)*N_orb,
                         ] = self.H[i0,i1]
 
                     i0n = (n0-i0) // N0
                     i1n = (n1-i1) // N1
                     if i0n > 0 or (i0n == 0 and i1n >= 0):
                         if (i0n,i1n) not in H:
-                            H[i0n,i1n] = Matrix(zeros((N0*N1*Nat,N0*N1*Nat),'D'))
+                            H[i0n,i1n] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),'D'))
 
                         H[i0n,i1n][
-                            (n0*N1+n1)*Nat:(n0*N1+n1+1)*Nat,
-                            ((n0-i0)%N0*N1+(n1-i1)%N1)*Nat:((n0-i0)%N0*N1+(n1-i1)%N1+1)*Nat,
+                            (n0*N1+n1)*N_orb:(n0*N1+n1+1)*N_orb,
+                            ((n0-i0)%N0*N1+(n1-i1)%N1)*N_orb:((n0-i0)%N0*N1+(n1-i1)%N1+1)*N_orb,
                         ] = adj(self.H[i0,i1])
 
         return sheet(H,xyz)
