@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import re
+from itertools import count
 
 import xyz, cnt, chain, sheet
 from param import param
@@ -413,32 +414,52 @@ class papaconstantopoulos:
                 H[0,0][4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
                 S[0,0][4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
 
+        def calc_H_S_i0_i1(i0,i1):
+            shift = i0 * period[0] + i1 * period[1]
+            h_hop = matrix(zeros((4*Natoms,4*Natoms),'D'))
+            s_hop = matrix(zeros((4*Natoms,4*Natoms),'D'))
+            nonzero = False
 
-        for i0 in range(6):
-            for i1 in range(-6,6):
-                if i0 == 0 and i1 <= 0:
-                    continue
+            for i in range(Natoms):
+                for j in range(Natoms):
+                    Rvec = at[i].pos - (at[j].pos + shift)
+                    drho, h_xyz, s_xyz = self.calc_pair_HS(Rvec)
 
-                h_hop = matrix(zeros((4*Natoms,4*Natoms),'D'))
-                s_hop = matrix(zeros((4*Natoms,4*Natoms),'D'))
-                nonzero = False
+                    if drho is None:
+                        continue
+                    nonzero = True
 
-                shift = i0 * period[0] + i1 * period[1]
+                    h_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
+                    s_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
+            if nonzero:
+                print "nonzero: %i,%i"%(i0,i1)
+                H[i0,i1] = h_hop
+                S[i0,i1] = s_hop
+            else:
+                print "zero: %i,%i"%(i0,i1)
 
-                for i in range(Natoms):
-                    for j in range(Natoms):
-                        Rvec = at[i].pos - (at[j].pos + shift)
-                        drho, h_xyz, s_xyz = self.calc_pair_HS(Rvec)
+            return nonzero
 
-                        if drho is None:
-                            continue
-                        nonzero = True
+        i0 = 0
+        for i1 in count(1):
+            nonzero = calc_H_S_i0_i1(i0,i1)
+            if not nonzero:
+                break
+        for i0 in count(1):
+            i1 = 0
+            nonzero = calc_H_S_i0_i1(i0,i1)
+            if not nonzero:
+                break
 
-                        h_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
-                        s_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
-                if nonzero:
-                    H[i0,i1] = h_hop
-                    S[i0,i1] = s_hop
+            for i1 in count(1):
+                nonzero = calc_H_S_i0_i1(i0,i1)
+                if not nonzero:
+                    break
+
+            for neg_i1 in count(1):
+                nonzero = calc_H_S_i0_i1(i0,-neg_i1)
+                if not nonzero:
+                    break
 
         for i in range(Natoms):
             rho3 = rho[i]**(1/3.)
