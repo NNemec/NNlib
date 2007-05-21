@@ -13,13 +13,12 @@ from calc import *
 param.createdefault("GRAPHENE_1STNN_HOPPING", 2.66*eV)
 
 def tight_binding_1stNN_graphene(xyz_coords,do_cache=True):
-    N = len(at)
-
     maxdist = param.GRAPHENE_CC_DISTANCE * 1.1
     gamma = param.GRAPHENE_1STNN_HOPPING
 
     at = xyz_coords.atoms
     period = xyz_coords.period
+    N = len(at)
 
     if isinstance(xyz_coords,xyz.chain):
         H = [ matrix(zeros((N,N),'D')) for i in range(2) ]
@@ -35,7 +34,7 @@ def tight_binding_1stNN_graphene(xyz_coords,do_cache=True):
                 if norm(at[i].pos - (at[j].pos + period)) < maxdist:
                     H[1][i,j] = -gamma
 
-        return chain(H,xyz_coords,do_cache=do_cache)
+        return chain.chain(H,xyz_coords,do_cache=do_cache)
 
     elif isinstance(xyz_coords,xyz.sheet):
         H = {}
@@ -61,7 +60,7 @@ def tight_binding_1stNN_graphene(xyz_coords,do_cache=True):
             if nonzero:
                 H[i0,i1] = H_hop
 
-        return sheet(H,xyz_coords,do_cache=do_cache)
+        return sheet.sheet(H,xyz_coords,do_cache=do_cache)
 
 
 
