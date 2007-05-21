@@ -69,36 +69,35 @@ class sheet:
 
                 def phase(s,d,shift):
                     # linear gauge:
-                    # phase = (d[1] - s[1]) * (d[0] + s[0]) * .5
+                    # Aavg = (dx + sx) * .5
+                    # phase = (dy - sy) * Aavg
 
-                    shiftx,shifty = shift
+                    sx,sy = s
+                    dx,dy = d
+                    dx += shift[0]
+                    dy += shift[1]
 
-                    si = int(s[0] // 1)
-                    sr = s[0] % 1
-                    sx = si+sr
-                    sy = s[1]
-                    di = int(d[0] // 1) + shiftx
-                    dr = d[0] % 1
-                    dx = di+dr
-                    dy = d[1] + shifty
-
-                    # forced gauge:
+                    # periodic gauge:
                     if dx == sx:
-                        phase = (dy - sy) * (dr)
+                        phase = (dy - sy) * (dx % 1)
 
                     else:
-                        Aavg = ( (di - si) * .5 + (dr - sr) * (dr + sr) * .5 ) / (dx - sx)
+                        si = int(sx // 1)
+                        sr = sx % 1
+                        di = int(dx // 1)
+                        dr = dx % 1
+
+                        # first the part "forced" to be periodic
+                        Aavg = .5 * (di - si + dr**2 - sr**2) / (dx - sx)
                         phase = (dy - sy) * Aavg
+
+                        # then the correction
                         if di > si:
-                            for i in range(si,di):
-                                x = i+1
-                                y = x * (dy-sy)/(dx-sx) + (dx*sy-sx*dy)/(dx-sx)
-                                phase -= y
+                            for x in range(si+1,di+1):
+                                phase -= x * (dy-sy)/(dx-sx) + (dx*sy-sx*dy)/(dx-sx)
                         elif di < si:
-                            for i in range(di,si):
-                                x = i+1
-                                y = x * (dy-sy)/(dx-sx) + (dx*sy-sx*dy)/(dx-sx)
-                                phase += y
+                            for x in range(di+1,si+1):
+                                phase += x * (dy-sy)/(dx-sx) + (dx*sy-sx*dy)/(dx-sx)
 
                     return phase%1
 
