@@ -11,7 +11,8 @@ param.createdefault("NO_DISORDER_IN_CONTACTS", False)
 
 class conductor:
     def __init__(self,xyz,H_int,H_hop):
-        N = [ len(x.atoms) for x in xyz ]
+        N = [ H.shape[0] for H in H_int ]
+#        N = [ len(x.atoms) for x in xyz ]
         assert len(H_int)==len(N)
         assert len(H_hop)==len(N)-1
         for i in range(len(N)):
@@ -21,7 +22,11 @@ class conductor:
             assert type(H_hop[i]) == type(Matrix(()))
             assert shape(H_hop[i]) == (N[i],N[i+1])
         self.N = N
-        self.xyz = xyz
+	if xyz is not None:
+	    assert len(xyz) == len(N)
+	    for i in range(len(N)):
+		assert len(xyz[i].atoms) == N[i]
+            self.xyz = xyz
         self.H_int_B0 = H_int
         self.H_hop_B0 = H_hop
         self.bfield = array((0,0,0))
@@ -283,13 +288,16 @@ class conductor:
 
 
 def create_from_chain(chain,length):
-    xyz = [ chain.xyz ]
-    H_int = [ chain.H_int_B0 ]
+    xyz = None
+    if hasattr(chain,'xyz'):
+	xyz = [ chain.xyz ]
+    H_int = [ chain.H_B0[0] ]
     H_hop = []
     for i in range(1,length):
-        xyz.append(chain.xyz.shift(i*chain.xyz.period))
-        H_int.append(chain.H_int_B0)
-        H_hop.append(chain.H_hop_B0)
+	if hasattr(chain,'xyz'):
+    	    xyz.append(chain.xyz.shift(i*chain.xyz.period))
+        H_int.append(chain.H_B0[0])
+        H_hop.append(chain.H_B0[1])
     return conductor(xyz,H_int,H_hop)
 
 def create_from_aperiodic_pi_orbital(aperiodic):

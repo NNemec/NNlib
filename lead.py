@@ -142,17 +142,17 @@ class lopez_sancho:
 
     def Sigma_L(self,energy=None):
         return (
-            adj(self.chain.H_hop)
+            adj(self.chain.H[1])
             * self.Gs_L(energy)
-            * self.chain.H_hop
+            * self.chain.H[1]
             * self.tunneling**2
         )
 
     def Sigma_R(self,energy=None):
         return (
-            self.chain.H_hop
+            self.chain.H[1]
             * self.Gs_R(energy)
-            * adj(self.chain.H_hop)
+            * adj(self.chain.H[1])
             * self.tunneling**2
         )
 
