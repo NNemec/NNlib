@@ -287,16 +287,17 @@ class conductor:
 
 
 
-def create_from_chain(chain,length):
+def create_from_chain(chain,length,epsilon_L=0,epsilon_R=0):
     xyz = None
     if hasattr(chain,'xyz'):
 	xyz = [ chain.xyz ]
-    H_int = [ chain.H_B0[0] ]
+    E = eye(len(chain.H_B0[0]))
+    H_int = [ chain.H_B0[0]+E*epsilon_L ]
     H_hop = []
     for i in range(1,length):
 	if hasattr(chain,'xyz'):
     	    xyz.append(chain.xyz.shift(i*chain.xyz.period))
-        H_int.append(chain.H_B0[0])
+        H_int.append(chain.H_B0[0]+E*(epsilon_L+i*(epsilon_R-epsilon_L)/(length-1.0)))
         H_hop.append(chain.H_B0[1])
     return conductor(xyz,H_int,H_hop)
 

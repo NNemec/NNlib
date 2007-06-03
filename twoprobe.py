@@ -45,7 +45,9 @@ class twoprobe:
     def set_disorder(self,disorder,seed=None):
         self.conductor.set_disorder(disorder,seed)
 
-    def transmission(self):
+    def transmission(self,energy=None):
+	if energy is not None:
+	    self.set_energy(energy)
         if self.Sigma_L is None:
             self.Sigma_L = []
             for l in self.lead_L:
