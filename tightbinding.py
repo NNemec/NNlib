@@ -381,7 +381,7 @@ class papaconstantopoulos:
 #           H[i] = H[i][2::4,2::4]
 #           S[i] = S[i][2::4,2::4]
 
-        return chain.chain(H,S=S,xyz_chain=xyz,do_cache=do_cache)
+        return chain.chain(H,S=S,xyz_chain=xyz_chain,do_cache=do_cache)
 
 
     def setup_sheet(self,xyz_sheet,do_cache=True):
