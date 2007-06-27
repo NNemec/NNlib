@@ -223,6 +223,54 @@ def grapheneribbon(M,N):
         a.pos[0] -= (maxx+minx)*0.5
     return cnt
 
+def GNR_armchair(Na):
+    # create cnt coordinates
+    cnt = swcnt(((Na+1)//2,0)) # zigzag CNT !
+    minx = Inf
+    maxx = -Inf
+    atoms = cnt.atoms[:Na*2]
+    # unroll the cnt
+    for a in atoms:
+        r = norm(a.pos[:2])
+#       print a.pos
+        phi = atan2(a.pos[1],a.pos[0])%(2*pi)
+#       print phi
+        a.pos[0] = r*phi
+        minx = min(minx,a.pos[0])
+        maxx = max(maxx,a.pos[0])
+        a.pos[1] = 0
+        a.rot = asmatrix(eye(3))
+    for a in atoms:
+        a.pos[0] -= (maxx+minx)*0.5
+    res = xyz.chain(period=cnt.period)
+    res.atoms = atoms
+    return res
+
+def GNR_zigzag(Nz):
+    # create cnt coordinates
+    cnt = swcnt(((Nz+1)//2,(Nz+1)//2)) # armchair CNT !
+    minx = Inf
+    maxx = -Inf
+    atoms = cnt.atoms[:Nz*2]
+    # unroll the cnt
+    for a in atoms:
+        r = norm(a.pos[:2])
+#       print a.pos
+        phi = atan2(a.pos[1],a.pos[0])%(2*pi)
+#       print phi
+        a.pos[0] = r*phi
+        minx = min(minx,a.pos[0])
+        maxx = max(maxx,a.pos[0])
+        a.pos[1] = 0
+        a.rot = asmatrix(eye(3))
+    for a in atoms:
+        a.pos[0] -= (maxx+minx)*0.5
+    res = xyz.chain(period=cnt.period)
+    res.atoms = atoms
+    return res
+
+
+
 def graphene():
     dCC = param.GRAPHENE_CC_DISTANCE
     res = xyz.sheet([[.75**.5*dCC,1.5*dCC,0],[-.75**.5*dCC,1.5*dCC,0]])
