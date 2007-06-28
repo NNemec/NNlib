@@ -27,7 +27,7 @@ class square_interp:
         a = (ar-al) * 1./(x2-x0)
         c = (bl*x2 - br*x0) * 1./(x2-x0)
 
-        x_min = b / (2*a)
+        x_min = - b / (2*a)
         y_min = c - b**2 / (4*a)
 
         self.__dict__.update(locals())
