@@ -67,7 +67,7 @@ class scan_adaptive:
             getattr(h5group,gname)._f_remove(recursive=True)
         g = pytables.Group(h5group,gname,new=True)
         filters = pytables.Filters(complevel=9, complib='zlib')
-        xatom = pytables.Float64Atom(shape=self.x.shape, flavor="numpy")
+        xatom = pytables.Float64Atom() # shape=self.x.shape) #, flavor="numpy")
         xdata = pytables.CArray(g,'x',shape=self.x.shape,atom=xatom,filters=filters)
         xdata[:] = self.x[:]
 #        pytables.CArray(g,'x',self.x, filters=filters)
@@ -76,7 +76,7 @@ class scan_adaptive:
             ydata = pytables.CArray(g,'y',shape=self.x.shape,atom=xatom,filters=filters)
             ydata[:] = self.y[:,0]
         else:
-            yatom = pytables.Float64Atom(shape=self.y.shape, flavor="numpy")
+            yatom = pytables.Float64Atom() # shape=self.y.shape) #, flavor="numpy")
 #           yatom = pytables.Float64Atom(shape=self.x.shape+(1,), flavor="numpy")
             ydata = pytables.CArray(g,'y',shape=self.y.shape,atom=yatom,filters=filters)
             ydata[:,:] = self.y[:,:]
