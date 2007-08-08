@@ -287,7 +287,7 @@ class papaconstantopoulos:
             [ 0.0 ,  0.0 ,s_ppp, 0.0 ],
             [ 0.0 ,  0.0 , 0.0 ,s_ppp],
         ])
-
+	
         return drho, h_sk, s_sk
 
 
@@ -431,11 +431,12 @@ class papaconstantopoulos:
                     h_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
                     s_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
             if nonzero:
-                print "nonzero: %i,%i"%(i0,i1)
+#                print "nonzero: %i,%i"%(i0,i1)
                 H[i0,i1] = h_hop
                 S[i0,i1] = s_hop
             else:
-                print "zero: %i,%i"%(i0,i1)
+#                print "zero: %i,%i"%(i0,i1)
+		pass
 
             return nonzero
 
