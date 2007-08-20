@@ -212,16 +212,11 @@ def square_ladder(N,gamma,gamma_perp=None,do_cache=True):
 def linchain(gamma,do_cache=True):
     return square_ladder(N=1,gamma=gamma,do_cache=do_cache)
 
-def tight_binding_1stNN_graphene(*args,**kwargs):
-    import tightbinding
-    return tightbinding.tight_binding_1stNN_graphene(*args,**kwargs)
-
-tight_binding_graphene_1stNN = tight_binding_1stNN_graphene
-
 if __name__ == "__main__":
     import cnt
+    import tightbinding
     x = cnt.armchair(20)
-    ch = tight_binding_1stNN_graphene(x)
+    ch = tightbinding.tight_binding_1stNN_graphene(x)
 
     a = ch.Gs_L(energy=0.5)
     b = ch.Gs_L(energy=1.0)

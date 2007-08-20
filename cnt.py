@@ -5,8 +5,8 @@ from units import *
 from param import param
 import xyz
 
-param.createdefault("GRAPHENE_CC_DISTANCE", 1.4226*angstrom)
-param.createdefault("GRAPHITE_INTERLAYER_DISTANCE", 3.34*angstrom)
+param.createdefault("GRAPHENE_CC_DISTANCE", 1.4226*Angstrom)
+param.createdefault("GRAPHITE_INTERLAYER_DISTANCE", 3.34*Angstrom)
 
 def SDOS_armchair_analytic(
     E, # in units of gamma
@@ -81,8 +81,8 @@ def is_metallic(M,N):
         assert M > 0
     return ((M-N)%3 == 0)
 
-A_plaquette = a**2 * 3**.5 * 1.5
-# v_F = 1.5*param.GRAPHENE_CC_DISTANCE*param.GRAPHENE_1STNN_HOPPING
+A_plaquette = param.GRAPHENE_CC_DISTANCE**2 * 3**.5 * 1.5
+v_F = 1.5/hbar*param.GRAPHENE_CC_DISTANCE*param.GRAPHENE_1STNN_HOPPING
 
 def radius(M,N):
     assert M >= 0
