@@ -430,6 +430,7 @@ class scan_adaptive:
         select[1:,:] |= y_interpolated_is_off
         select[:-1,:] |= (abs(y_left_extrapolated - y[:-2,:]) > yminstep)
         select[1:,:] |= (abs(y_right_extrapolated - y[2:,:]) > yminstep)
+        select[:,:] |= isnan(y[:-1,:]) ^ isnan(y[1:,:])
 
         Nselected = select.any(axis=-1).sum()
         self.debugout("yminstep-selected: %i"%Nselected)
@@ -473,9 +474,9 @@ class scan_adaptive:
                 x,
                 x[:1] + self.period,
             ))
-	    addyvals = y[:1,:]
-	    if hasattr(self,'totalpermut'):
-		addyvals = addyvals[:,self.totalpermut]
+            addyvals = y[:1,:]
+            if hasattr(self,'totalpermut'):
+                addyvals = addyvals[:,self.totalpermut]
             y = concatenate((
                 y,
                 addyvals,
