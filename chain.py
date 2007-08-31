@@ -10,10 +10,11 @@ param.createdefault("LOPEZ_SANCHO_MAXSTEPS", 100)
 class chain:
     def __init__(self,H_B0,xyz_chain=None,do_cache=True,S=None):
         assert type(H_B0) is list
-        self.N_orbitals = H_B0[0].shape[0]
+        N = H_B0[0].shape[0]
+        self.N_orbitals = N
         for h_b0 in H_B0:
             assert type(h_b0) is matrix
-            assert h_b0.shape == (self.N_orbitals,self.N_orbitals)
+            assert h_b0.shape == (N,N)
         self.H = H_B0
         self.H_B0 = H_B0
 
@@ -23,17 +24,20 @@ class chain:
             self.xyz_shifted = [ xyz_chain.shift(xyz_chain.period * i) for i in range(1,len(H_B0)) ]
             self.bfield = array((0,0,0))
 
-        if S is not None:
+        self.nonorthogonal = (S is not None)
+
+        if self.nonorthogonal:
             for s in S:
                 assert type(s) is matrix
-                assert s.shape == (self.N_orbitals,self.N_orbitals)
+                assert s.shape == (N,N)
             self.S = S
+        else:
+            self.S = [ matrix(eye(N)) ] + [ matrix(zeros((N,N))) ] * (len(H_B0)-1)
 
         self.energy = None
         if do_cache:
             self.cache = {}
         (self._G_bulk,self._Gs_L,self._Gs_R) = (None,None,None)
-
 
     def set_bfield(self,bfield):
         import bfield as bf
@@ -69,24 +73,26 @@ class chain:
                     self.cache[self.energy] = (self._G_bulk,self._Gs_L,self._Gs_R)
 
     def _do_calc_lopez_sancho(self):
-        assert not hasattr(self,'S')
         assert len(self.H) == 2
 
         # ToDo: find documentation (Lopez-Sancho)
-        E = (self.energy+1j*param.LOPEZ_SANCHO_ETA) * Matrix(eye(self.N_orbitals))
+        E = (self.energy+1j*param.LOPEZ_SANCHO_ETA)
 
-        # alpha = energy*S_hop - chain.H_hop;
-        # beta = energy*chain.S_hop' - chain.H_hop';
-        alpha = - self.H[1]
-        beta = - adj(self.H[1])
-        epsilon = E - self.H[0]
+        if self.nonorthogonal:
+            alpha = E*self.S[1] - self.H[1]
+            beta = E*self.S[1].H - self.H[1].H
+        else:
+            alpha = - self.H[1]
+            beta = - self.H[1].H
+        epsilon = E*self.S[0] - self.H[0]
+
         epsilon_L = epsilon
         epsilon_R = epsilon
 
         i = 0;
         EPS = param.LOPEZ_SANCHO_EPSILON;
         while abs(alpha).A.sum() + abs(beta).A.sum() > EPS:
-            gamma = inv(epsilon)
+            gamma = epsilon.I
             temp_agb = alpha*gamma*beta
             temp_bga = beta*gamma*alpha
             alpha = alpha*gamma*alpha
@@ -99,9 +105,9 @@ class chain:
             if i > param.LOPEZ_SANCHO_MAXSTEPS:
                 raise "Lopez Sancho does not converge"
 
-        G_bulk = inv(epsilon)
-        Gs_L = inv(epsilon_L)
-        Gs_R = inv(epsilon_R)
+        G_bulk = epsilon.I
+        Gs_L = epsilon_L.I
+        Gs_R = epsilon_R.I
 
         self._G_bulk = G_bulk
         self._Gs_L = Gs_L
@@ -128,17 +134,16 @@ class chain:
         return res
 
     def S_eff(self,k):
-        if not hasattr(self,'S'):
-            return None
         res = self.S[0].copy()
-        def adjsum(a):
-            return a + a.H
-        for i in range(1,len(self.S)):
-            res += adjsum(exp(1j*k*i)*self.S[i])
+        if self.nonorthogonal:
+            def adjsum(a):
+                return a + a.H
+            for i in range(1,len(self.S)):
+                res += adjsum(exp(1j*k*i)*self.S[i])
         return res
 
     def band_energies(self,k):
-        if hasattr(self,'S'):
+        if self.nonorthogonal:
             return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(k),self.S_eff(k))))))
         else:
             return array(sorted(list(real(eigvalsh(self.H_eff(k))))))
@@ -156,22 +161,31 @@ class chain:
         return -1./pi*imag(trace(self.Gs_L(energy)))/self.N_orbitals
 
     def transmission(self,energy=None):
+        assert len(self.H) == 2
         self.set_energy(energy)
-        E = (self.energy+1j*param.LOPEZ_SANCHO_ETA)*Matrix(eye(self.N_orbitals))
-        Sigma_L = adj(self.H[1])*self.Gs_L()*self.H[1]
-        Sigma_R = self.H[1]*self.Gs_R()*adj(self.H[1])
-        Gamma_L = 1j*(Sigma_L-adj(Sigma_L))
-        Gamma_R = 1j*(Sigma_R-adj(Sigma_R))
-        Gc = inv(E-self.H[0]-Sigma_L-Sigma_R)
-        return real(trace(Gamma_L*Gc*Gamma_R*adj(Gc)))
+        E = (self.energy+1j*param.LOPEZ_SANCHO_ETA)
+        if self.nonorthogonal:
+            ES_H_1 = E*self.S[1] - self.H[1]
+            ESh_Hh_1 = E*self.S[1].H - self.H[1].H
+        else:
+            ES_H_1 = - self.H[1]
+            EaS_aH_1 = - self.H[1].H
+        Sigma_L = ESh_Hh_1 * self.Gs_L() * ES_H_1
+        Sigma_R = ES_H_1 * self.Gs_R() * ESh_Hh_1
+        Gamma_L = 1j*(Sigma_L - Sigma_L.H)
+        Gamma_R = 1j*(Sigma_R - Sigma_R.H)
+        Gc = (E*self.S[0]-self.H[0]-Sigma_L-Sigma_R).I
+        return real(trace(Gamma_L * Gc * Gamma_R * Gc.H))
 
-    def multiply(self,N):
+    def multiply(self,N = None):
+        if N == None:
+            N = len(self.H_B0) - 1
         xyz = None
         A = self.N_orbitals
         if hasattr(self,'xyz'):
             xyz = self.xyz.multiply(N)
         assert len(self.H_B0) <= N+1
-        H = [ Matrix(zeros((N*A,N*A),'D')) for i in range(2) ]
+        H = [ matrix(zeros((N*A,N*A),complex)) for i in range(2) ]
         for n in range(N):
             H[0][n*A:(n+1)*A,n*A:(n+1)*A] = self.H_B0[0]
         for i in range(1,len(self.H_B0)):
@@ -179,9 +193,9 @@ class chain:
                 H[1][(n-i+N)*A:(n-i+N+1)*A,n*A:(n+1)*A] = self.H_B0[i]
             for n in range(i,N):
                 H[0][(n-i)*A:(n-i+1)*A,n*A:(n+1)*A] = self.H_B0[i]
-                H[0][n*A:(n+1)*A,(n-i)*A:(n-i+1)*A] = adj(self.H_B0[i])
-        if hasattr(self,'S'):
-            S = [ Matrix(zeros((N*A,N*A),'D')) for i in range(2) ]
+                H[0][n*A:(n+1)*A,(n-i)*A:(n-i+1)*A] = self.H_B0[i].H
+        if self.nonorthogonal:
+            S = [ matrix(zeros((N*A,N*A))) for i in range(2) ]
             for n in range(N):
                 S[0][n*A:(n+1)*A,n*A:(n+1)*A] = self.S[0]
             for i in range(1,len(self.S)):
@@ -189,7 +203,7 @@ class chain:
                     S[1][(n-i+N)*A:(n-i+N+1)*A,n*A:(n+1)*A] = self.S[i]
                 for n in range(i,N):
                     S[0][(n-i)*A:(n-i+1)*A,n*A:(n+1)*A] = self.S[i]
-                    S[0][n*A:(n+1)*A,(n-i)*A:(n-i+1)*A] = adj(self.S[i])
+                    S[0][n*A:(n+1)*A,(n-i)*A:(n-i+1)*A] = self.S[i].H
         else:
             S = None
         return chain(H,xyz,S=S)
@@ -198,7 +212,7 @@ def square_ladder(N,gamma,gamma_perp=None,do_cache=True):
     if gamma_perp == None:
         gamma_perp = gamma
 
-    H = [ Matrix(zeros((N,N),'D')) for i in range(2) ]
+    H = [ matrix(zeros((N,N),complex)) for i in range(2) ]
 
     for n in range(1,N):
         H[0][n-1,n] = -gamma_perp
