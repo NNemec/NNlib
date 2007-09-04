@@ -15,6 +15,7 @@ class chain:
         for h_b0 in H_B0:
             assert type(h_b0) is matrix
             assert h_b0.shape == (N,N)
+	    assert h_b0.dtype == H_B0[0].dtype
         self.H = H_B0
         self.H_B0 = H_B0
 
@@ -30,6 +31,7 @@ class chain:
             for s in S:
                 assert type(s) is matrix
                 assert s.shape == (N,N)
+	        assert s.dtype == S[0].dtype
             self.S = S
         else:
             self.S = [ matrix(eye(N)) ] + [ matrix(zeros((N,N))) ] * (len(H_B0)-1)
@@ -187,7 +189,7 @@ class chain:
         if hasattr(self,'xyz'):
             xyz = self.xyz.multiply(N)
         assert len(self.H_B0) <= N+1
-        H = [ matrix(zeros((N*A,N*A),complex)) for i in range(2) ]
+        H = [ matrix(zeros((N*A,N*A),self.H_B0[0].dtype)) for i in range(2) ]
         for n in range(N):
             H[0][n*A:(n+1)*A,n*A:(n+1)*A] = self.H_B0[0]
         for i in range(1,len(self.H_B0)):
@@ -197,7 +199,7 @@ class chain:
                 H[0][(n-i)*A:(n-i+1)*A,n*A:(n+1)*A] = self.H_B0[i]
                 H[0][n*A:(n+1)*A,(n-i)*A:(n-i+1)*A] = self.H_B0[i].H
         if self.nonorthogonal:
-            S = [ matrix(zeros((N*A,N*A))) for i in range(2) ]
+            S = [ matrix(zeros((N*A,N*A),self.S[0].dtype)) for i in range(2) ]
             for n in range(N):
                 S[0][n*A:(n+1)*A,n*A:(n+1)*A] = self.S[0]
             for i in range(1,len(self.S)):
@@ -214,7 +216,7 @@ def square_ladder(N,gamma,gamma_perp=None,do_cache=True):
     if gamma_perp == None:
         gamma_perp = gamma
 
-    H = [ matrix(zeros((N,N),complex)) for i in range(2) ]
+    H = [ matrix(zeros((N,N))) for i in range(2) ]
 
     for n in range(1,N):
         H[0][n-1,n] = -gamma_perp

@@ -20,6 +20,7 @@ class sheet:
             self.imax = max(self.imax,i0,i1,-i1)
             assert type(H_B0[i0,i1]) is matrix
             assert H_B0[i0,i1].shape == (self.N_orbitals,self.N_orbitals)
+            assert H_B0[i0,i1].dtype == H_B0[0,0].dtype
 
         self.H_B0 = H_B0
         self.H = H_B0
@@ -30,6 +31,7 @@ class sheet:
             for k in S:
                 assert type(S[k]) is matrix
                 assert S[k].shape == (self.N_orbitals,self.N_orbitals)
+        	assert S[k].dtype == S[0,0].dtype
             self.S = S
 
         if xyz_sheet is not None:
@@ -148,7 +150,7 @@ class sheet:
         if hasattr(self,'xyz'):
             xyz = self.xyz.multiply(N0,N1)
         H = {}
-        H[0,0] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),'D'))
+        H[0,0] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),self.H[0,0].dtype))
         for n0 in range(N0):
             for n1 in range(N1):
                 H[0,0][
@@ -163,7 +165,7 @@ class sheet:
                     i1n = (n1+i1) // N1
                     if i0n > 0 or (i0n == 0 and i1n >= 0):
                         if (i0n,i1n) not in H:
-                            H[i0n,i1n] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),'D'))
+                            H[i0n,i1n] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),self.H[0,0].dtype))
 
                         H[i0n,i1n][
                             (n0*N1+n1)*N_orb:(n0*N1+n1+1)*N_orb,
@@ -174,7 +176,7 @@ class sheet:
                     i1n = (n1-i1) // N1
                     if i0n > 0 or (i0n == 0 and i1n >= 0):
                         if (i0n,i1n) not in H:
-                            H[i0n,i1n] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),'D'))
+                            H[i0n,i1n] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),self.H[0,0].dtype))
 
                         H[i0n,i1n][
                             (n0*N1+n1)*N_orb:(n0*N1+n1+1)*N_orb,

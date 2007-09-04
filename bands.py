@@ -114,7 +114,7 @@ if __name__ == "__main__":
     
     scan = scan_bands(
 	chain,
-#	precision=1e-4,
+	precision=1e-3,
 	verbose=True,
     )
     scan.do_scan()
@@ -151,7 +151,7 @@ if __name__ == "__main__":
 	calc_DOS,
 	linspace(Emin,Emax,5),
 	verbose = True,
-	precision = 1e-5,
+	precision = 1e-3,
     )
     scan_DOS.do_scan()
 
@@ -162,7 +162,7 @@ if __name__ == "__main__":
 	calc_NOS,
 	linspace(Emin,Emax,5),
 	verbose = True,
-	precision = 1e-5,
+	precision = 1e-3,
     )
     scan_NOS.do_scan()
 

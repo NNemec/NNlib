@@ -21,7 +21,7 @@ def tight_binding_1stNN_graphene(xyz_coords,do_cache=True):
     N = len(at)
 
     if isinstance(xyz_coords,xyz.chain):
-        H = [ matrix(zeros((N,N),'D')) for i in range(2) ]
+        H = [ matrix(zeros((N,N))) for i in range(2) ]
 
         for i in range(N):
             for j in range(i+1,N):
@@ -38,7 +38,7 @@ def tight_binding_1stNN_graphene(xyz_coords,do_cache=True):
 
     elif isinstance(xyz_coords,xyz.sheet):
         H = {}
-        H[0,0] = matrix(zeros((N,N),'D'))
+        H[0,0] = matrix(zeros((N,N)))
 
         for i in range(N):
             for j in range(i+1,N):
@@ -49,7 +49,7 @@ def tight_binding_1stNN_graphene(xyz_coords,do_cache=True):
         for i0,i1 in [(0,1),(1,1),(1,0),(1,-1)]:
             shift = i0 * period[0] + i1 * period[1]
 
-            H_hop = matrix(zeros((N,N),'D'))
+            H_hop = matrix(zeros((N,N)))
             nonzero = False
 
             for i in range(N):
@@ -130,7 +130,7 @@ def tight_binding_triozon(xyz_coords,do_cache=True,graphite=False):
             return 0.0
 
     if isinstance(xyz_coords,xyz.chain):
-        H = [ matrix(zeros((Natoms,Natoms),'D')) ]
+        H = [ matrix(zeros((Natoms,Natoms))) ]
 
         for i in range(Natoms):
             for j in range(i+1,Natoms):
@@ -140,7 +140,7 @@ def tight_binding_triozon(xyz_coords,do_cache=True,graphite=False):
                     H[0][j,i] = conj(hop)
 
         for n in range(1,100):
-            h = Matrix(zeros((Natoms,Natoms),'D'))
+            h = Matrix(zeros((Natoms,Natoms)))
             nonzero = False
             for i in range(Natoms):
                 for j in range(Natoms):
@@ -159,7 +159,7 @@ def tight_binding_triozon(xyz_coords,do_cache=True,graphite=False):
     elif isinstance(xyz_coords,xyz.sheet):
 
         H = {}
-        H[0,0] = matrix(zeros((Natoms,Natoms),'D'))
+        H[0,0] = matrix(zeros((Natoms,Natoms)))
 
         for i in range(Natoms):
             for j in range(i+1,Natoms):
@@ -174,7 +174,7 @@ def tight_binding_triozon(xyz_coords,do_cache=True,graphite=False):
                     continue
                 shift = i0 * period[0] + i1 * period[1]
 
-                H_hop = matrix(zeros((Natoms,Natoms),'D'))
+                H_hop = matrix(zeros((Natoms,Natoms)))
                 nonzero = False
 
                 for i in range(Natoms):
@@ -327,14 +327,14 @@ class papaconstantopoulos:
         period = xyz_chain.period
         Natoms = len(at)
 
-        rho = zeros((Natoms,),'d')
+        rho = zeros((Natoms,))
         H = []
         S = []
         for n in range(20):
             at_sh = xyz_chain.shift(period*n).atoms
 
-            h = matrix(zeros((4*Natoms,4*Natoms),'D'))
-            s = matrix(zeros((4*Natoms,4*Natoms),'D'))
+            h = matrix(zeros((4*Natoms,4*Natoms)))
+            s = matrix(zeros((4*Natoms,4*Natoms)))
             nonzero = False
             for i in range(Natoms):
                 for j in range(Natoms):
@@ -377,10 +377,6 @@ class papaconstantopoulos:
                 H[0][4*i:4*i+4,4*j:4*j+4] = H[0][4*j:4*(j+1),4*i:4*(i+1)].H
                 S[0][4*i:4*i+4,4*j:4*j+4] = S[0][4*j:4*(j+1),4*i:4*(i+1)].H
 
-#       for i in range(len(H)):
-#           H[i] = H[i][2::4,2::4]
-#           S[i] = S[i][2::4,2::4]
-
         return chain.chain(H,S=S,xyz_chain=xyz_chain,do_cache=do_cache)
 
 
@@ -395,10 +391,10 @@ class papaconstantopoulos:
 
         H = {}
         S = {}
-        rho = zeros((Natoms,),'d')
+        rho = zeros((Natoms,))
 
-        H[0,0] = matrix(zeros((4*Natoms,4*Natoms),'D'))
-        S[0,0] = matrix(zeros((4*Natoms,4*Natoms),'D'))
+        H[0,0] = matrix(zeros((4*Natoms,4*Natoms)))
+        S[0,0] = matrix(zeros((4*Natoms,4*Natoms)))
         for i in range(Natoms):
             for j in range(i+1,Natoms):
                 Rvec = at[i].pos - at[j].pos
@@ -415,8 +411,8 @@ class papaconstantopoulos:
 
         def calc_H_S_i0_i1(i0,i1):
             shift = i0 * period[0] + i1 * period[1]
-            h_hop = matrix(zeros((4*Natoms,4*Natoms),'D'))
-            s_hop = matrix(zeros((4*Natoms,4*Natoms),'D'))
+            h_hop = matrix(zeros((4*Natoms,4*Natoms)))
+            s_hop = matrix(zeros((4*Natoms,4*Natoms)))
             nonzero = False
 
             for i in range(Natoms):
@@ -431,11 +427,9 @@ class papaconstantopoulos:
                     h_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * h_xyz * at[j].rot4
                     s_hop[4*i:4*i+4,4*j:4*j+4] = at[i].rot4.T * s_xyz * at[j].rot4
             if nonzero:
-#                print "nonzero: %i,%i"%(i0,i1)
                 H[i0,i1] = h_hop
                 S[i0,i1] = s_hop
             else:
-#                print "zero: %i,%i"%(i0,i1)
 		pass
 
             return nonzero
@@ -478,10 +472,6 @@ class papaconstantopoulos:
             for j in range(i):
                 H[0,0][4*i:4*(i+1),4*j:4*(j+1)] = H[0,0][4*j:4*(j+1),4*i:4*(i+1)].H
                 S[0,0][4*i:4*(i+1),4*j:4*(j+1)] = S[0,0][4*j:4*(j+1),4*i:4*(i+1)].H
-
-#       for k in H:
-#           H[k] = H[k][3::4,3::4]
-#           S[k] = S[k][3::4,3::4]
 
         return sheet.sheet(H,S=S,xyz_sheet=xyz_sheet,do_cache=do_cache)
 
