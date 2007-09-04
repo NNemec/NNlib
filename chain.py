@@ -37,6 +37,7 @@ class chain:
             self.S = [ matrix(eye(N)) ] + [ matrix(zeros((N,N))) ] * (len(H_B0)-1)
 
         self.energy = None
+        self.Sigma = 0.0
         if do_cache:
             self.cache = {}
         (self._G_bulk,self._Gs_L,self._Gs_R) = (None,None,None)
@@ -59,26 +60,29 @@ class chain:
                 self.cache = {}
             (self._G_bulk,self._Gs_L,self._Gs_R) = (None,None,None)
 
-    def set_energy(self,energy):
+    def set_energy(self,energy,Sigma=0.0):
         if energy is None:
             assert self.energy is not None
         else:
-            if energy != self.energy:
+            if energy != self.energy or any(Sigma != self.Sigma):
                 (self._G_bulk,self._Gs_L,self._Gs_R) = (None,None,None)
             self.energy = energy
+	self.Sigma = Sigma
         if self._G_bulk is None:
-            if hasattr(self,'cache') and self.energy in self.cache:
+            if hasattr(self,'cache') and self.energy in self.cache and all(Sigma == 0.0):
                 (self._G_bulk,self._Gs_L,self._Gs_R) = self.cache[self.energy]
             else:
-                self._do_calc_lopez_sancho()
-                if hasattr(self,'cache'):
+                self._do_calc_lopez_sancho(Sigma=Sigma)
+                if hasattr(self,'cache') and all(Sigma == 0.0):
                     self.cache[self.energy] = (self._G_bulk,self._Gs_L,self._Gs_R)
 
-    def _do_calc_lopez_sancho(self):
+    def _do_calc_lopez_sancho(self,Sigma=0.0):
         assert len(self.H) == 2
 
         # ToDo: find documentation (Lopez-Sancho)
         E = (self.energy+1j*param.LOPEZ_SANCHO_ETA)
+
+        epsilon = E*self.S[0] - self.H[0] - Sigma
 
         if self.nonorthogonal:
             alpha = E*self.S[1] - self.H[1]
@@ -86,7 +90,6 @@ class chain:
         else:
             alpha = - self.H[1]
             beta = - self.H[1].H
-        epsilon = E*self.S[0] - self.H[0]
 
         epsilon_L = epsilon
         epsilon_R = epsilon
@@ -115,16 +118,16 @@ class chain:
         self._Gs_L = Gs_L
         self._Gs_R = Gs_R
 
-    def Gs_L(self,energy=None):
-        self.set_energy(energy)
+    def Gs_L(self,energy=None,Sigma=0.0):
+        self.set_energy(energy,Sigma)
         return self._Gs_L
 
-    def Gs_R(self,energy=None):
-        self.set_energy(energy)
+    def Gs_R(self,energy=None,Sigma=0.0):
+        self.set_energy(energy,Sigma)
         return self._Gs_R
 
-    def G_bulk(self,energy=None):
-        self.set_energy(energy)
+    def G_bulk(self,energy=None,Sigma=0.0):
+        self.set_energy(energy,Sigma)
         return self._G_bulk
 
     def H_eff(self,k):
@@ -152,21 +155,21 @@ class chain:
         else:
             return array(sorted(list(real(eigvalsh(self.H_eff(k))))))
 
-    def DOS(self,energy=None):
-        return -1./pi*imag(trace(self.G_bulk(energy)))/self.N_orbitals
+    def DOS(self,energy=None,Sigma=0.0):
+        return -1./pi*imag(trace(self.G_bulk(energy,Sigma)))/self.N_orbitals
 
-    def LDOS(self,energy=None):
-        return -1./pi*imag(diag(self.G_bulk(energy)))
+    def LDOS(self,energy=None,Sigma=0.0):
+        return -1./pi*imag(diag(self.G_bulk(energy,Sigma)))
 
-    def SDOS_L(self,energy=None):
-        return -1./pi*imag(trace(self.Gs_L(energy)))/self.N_orbitals
+    def SDOS_L(self,energy=None,Sigma=0.0):
+        return -1./pi*imag(trace(self.Gs_L(energy,Sigma)))/self.N_orbitals
 
-    def SDOS_R(self,energy=None):
-        return -1./pi*imag(trace(self.Gs_L(energy)))/self.N_orbitals
+    def SDOS_R(self,energy=None,Sigma=0.0):
+        return -1./pi*imag(trace(self.Gs_L(energy,Sigma)))/self.N_orbitals
 
-    def transmission(self,energy=None):
+    def transmission(self,energy=None, Sigma=0.0):
         assert len(self.H) == 2
-        self.set_energy(energy)
+        self.set_energy(energy, Sigma=Sigma)
         E = (self.energy+1j*param.LOPEZ_SANCHO_ETA)
         if self.nonorthogonal:
             ES_H_1 = E*self.S[1] - self.H[1]
@@ -178,7 +181,7 @@ class chain:
         Sigma_R = ES_H_1 * self.Gs_R() * ESh_Hh_1
         Gamma_L = 1j*(Sigma_L - Sigma_L.H)
         Gamma_R = 1j*(Sigma_R - Sigma_R.H)
-        Gc = (E*self.S[0]-self.H[0]-Sigma_L-Sigma_R).I
+        Gc = (E*self.S[0]-self.H[0]-Sigma-Sigma_L-Sigma_R).I
         return real(trace(Gamma_L * Gc * Gamma_R * Gc.H))
 
     def multiply(self,N = None):
