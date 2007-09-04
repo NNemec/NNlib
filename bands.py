@@ -26,6 +26,34 @@ class scan_bands(scan_adaptive):
         )
         self.Nbands = self.y.shape[1]
 
+
+    def sort_crossing(self):
+        x = concatenate(( self.x[-2:] - self.period, self.x ))
+        y = concatenate(( self.y[-2:,:],             self.y ),axis=0)
+
+        xdiff = x[1:] - x[:-1]
+        ydiff = y[1:,:] - y[:-1,:]
+        slope = ydiff / xdiff[:,None]
+        offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None]) / xdiff[:,None]
+
+        y_right_extrapolated = x[2:,None]*slope[:-1,:] + offset[:-1,:]
+        totalpermut = arange(y.shape[1])
+        for i in range(len(x)-2):
+            permut = argsort(y_right_extrapolated[i])
+            if any(permut[1:]<permut[:-1]):
+                y[:i+2,:] = y[:i+2,permut]
+                if i+3<len(x):
+                    ydiff[i+1,:] = y[i+2,:] - y[i+1,:]
+                    slope[i+1,:] = ydiff[i+1,:]/xdiff[i+1,None]
+                    offset[i+1,:] = (y[i+1,:]*x[i+2,None] - y[i+2,:]*x[i+1,None])/xdiff[i+1,None]
+                    y_right_extrapolated[i+1,:] = x[i+3,None]*slope[i+1,:] + offset[i+1,:]
+                totalpermut = totalpermut[permut]
+
+        self.totalpermut = totalpermut
+        self.totalpermut_inv = totalpermut.argsort()
+        self.y = y[2:,:]
+
+
     def calc_N_bands(self,energy):
         kcut, = self.find_valuecut(
             energy,
@@ -58,16 +86,14 @@ class scan_bands(scan_adaptive):
         )
         NOS = sum(signcut*kcut) / (2*pi)
         NOS += sum(self.y[0,:] < maxenergy) # to add bands that wrap to next brillouin zone
-#        print maxenergy / eV, NOS
         return NOS
+
 
     def find_fermi_energy(self,NOE,yminstep=None):
         """
         calculate the Fermi energy for a given number of electrons per unit cell (NOS)
         """
 	
-	
-        print "NOE:",NOE
 	Emax = self.y.max()
 	Emin = self.y.min()
 
@@ -80,7 +106,6 @@ class scan_bands(scan_adaptive):
         NOSmin = self.calc_NOS(Emin)
 
         while (Emax - Emin) > yminstep or (NOSmax-NOSmin) > self.precision:
-#            Emid = (Emax+Emin) / 2
             Emid = (NOE-NOSmin) * (Emax-Emin) / (NOSmax-NOSmin) + Emin
             NOSmid = self.calc_NOS(Emid)
 	    assert Emin <= Emid 
@@ -100,6 +125,7 @@ class scan_bands(scan_adaptive):
                 return Emid
 
         return (Emin+Emax) / 2
+
 
 if __name__ == "__main__":
     import cnt, tightbinding, units

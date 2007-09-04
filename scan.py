@@ -67,20 +67,16 @@ class scan_adaptive:
             getattr(h5group,gname)._f_remove(recursive=True)
         g = pytables.Group(h5group,gname,new=True)
         filters = pytables.Filters(complevel=9, complib='zlib')
-        xatom = pytables.Float64Atom() # shape=self.x.shape) #, flavor="numpy")
+        xatom = pytables.Atom.from_dtype(self.x.dtype)
+        yatom = pytables.Atom.from_dtype(self.y.dtype)
         xdata = pytables.CArray(g,'x',shape=self.x.shape,atom=xatom,filters=filters)
         xdata[:] = self.x[:]
-#        pytables.CArray(g,'x',self.x, filters=filters)
         if self.y.shape[1] == 1:
-#            pytables.CArray(g,'y',self.y[:,0], filters=filters)
-            ydata = pytables.CArray(g,'y',shape=self.x.shape,atom=xatom,filters=filters)
+            ydata = pytables.CArray(g,'y',shape=self.y.shape[:1],atom=yatom,filters=filters)
             ydata[:] = self.y[:,0]
         else:
-            yatom = pytables.Float64Atom() # shape=self.y.shape) #, flavor="numpy")
-#           yatom = pytables.Float64Atom(shape=self.x.shape+(1,), flavor="numpy")
             ydata = pytables.CArray(g,'y',shape=self.y.shape,atom=yatom,filters=filters)
             ydata[:,:] = self.y[:,:]
-#            pytables.CArray(g,'y',self.y, filters=filters)
         h5group._v_file.flush()
 
 
@@ -101,29 +97,6 @@ class scan_adaptive:
             oldN = len(self.x)
             self.refine_visible()
 
-
-    def interpolate_linear(self,xgrid):
-        x = self.x[:]
-        y = self.y[:,:]
-
-        if self.period is not None:
-            x = concatenate((x[-1:]-self.period,x,x[:1]+self.period),axis=0)
-            y = concatenate((y[-1:,:],y,y[:1,:]),axis=0)
-
-        xgrid = asarray(xgrid)
-
-        assert all(xgrid <= x[-1])
-        assert all(xgrid >= x[0])
-
-        segm_idx = x.searchsorted(xgrid)
-        if segm_idx[0] == 0:
-            segm_idx[0] = 1
-        segm_idx -= 1
-        xdiff = x[1:] - x[:-1]
-        ydiff = y[1:] - y[:-1]
-        slope = ydiff/xdiff[:,None]
-        offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None]) / xdiff[:,None]
-        return slope[segm_idx] * xgrid[:,None] + offset[segm_idx]
 
 
     def addpoints(self,newxpoints,xlims=None,xminstep=None,internalcall=False):
@@ -420,17 +393,11 @@ class scan_adaptive:
         slope = ydiff/xdiff[:,None]
         offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None])/xdiff[:,None]
 
-        # linear interpolation: y1 = ((x1-x0)*y2 + (x2-x1)*y0)/(x2-x0)
         y_interpolated = (xdiff[:-1,None]*y[2:,:] + xdiff[1:,None] * y[:-2,:]) / xdiff2[:,None]
-#        print "self.yminstep =",self.yminstep
-#        print "y_inter_err =",y_interpolated - y[1:-1,:]
         y_interpolated_is_off = (abs(y_interpolated - y[1:-1,:]) > yminstep)
 
-#        print y.shape, x.shape, slope.shape, offset.shape
         y_left_extrapolated = x[:-2,None]*slope[1:,:] + offset[1:,:]
         y_right_extrapolated = x[2:,None]*slope[:-1,:] + offset[:-1,:]
-#        print "y_left_err =",y_left_extrapolated - y[:-2,:]
-#        print "y_right_err =",y_right_extrapolated - y[2:,:]
 
         select = zeros(xdiff.shape+y.shape[1:],bool)
         select[:-1,:] |= y_interpolated_is_off
@@ -563,8 +530,6 @@ class scan_adaptive:
 
         shifted = y - value
         sgn = 2.0 * (shifted >= 0) - 1.0
-#       sgn = sign(shifted)
-#       sgn[sng == 0.0] = 1.0
         sgnleft = sgn[:-1,:]
         sgnright = sgn[1:,:]
         sgnchange = (sgnright - sgnleft)/2.
@@ -587,150 +552,40 @@ class scan_adaptive:
         return res
 
 
-    def sort_crossing(self):
-        x = self.x
-        y = self.y
+    def interpolate_linear(self,xgrid):
+        x = self.x[:]
+        y = self.y[:,:]
 
         if self.period is not None:
-            x = concatenate((
-                x[-2:] - self.period,
-                x,
-            ))
-            y = concatenate((
-                y[-2:,:],
-                y,
-            ),axis=0)
+            x = concatenate((x[-1:]-self.period,x,x[:1]+self.period),axis=0)
+            y = concatenate((y[-1:,:],y,y[:1,:]),axis=0)
 
+        xgrid = asarray(xgrid)
+
+        assert all(xgrid <= x[-1])
+        assert all(xgrid >= x[0])
+
+        segm_idx = x.searchsorted(xgrid)
+        if segm_idx[0] == 0:
+            segm_idx[0] = 1
+        segm_idx -= 1
         xdiff = x[1:] - x[:-1]
-        ydiff = y[1:,:] - y[:-1,:]
+        ydiff = y[1:] - y[:-1]
         slope = ydiff/xdiff[:,None]
-        offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None])/xdiff[:,None]
-
-        y_right_extrapolated = x[2:,None]*slope[:-1,:] + offset[:-1,:]
-        totalpermut = arange(y.shape[1])
-        for i in range(len(x)-2):
-            permut = argsort(y_right_extrapolated[i])
-            if any(permut[1:]<permut[:-1]):
-                y[:i+2,:] = y[:i+2,permut]
-                if i+3<len(x):
-                    ydiff[i+1,:] = y[i+2,:] - y[i+1,:]
-                    slope[i+1,:] = ydiff[i+1,:]/xdiff[i+1,None]
-                    offset[i+1,:] = (y[i+1,:]*x[i+2,None] - y[i+2,:]*x[i+1,None])/xdiff[i+1,None]
-                    y_right_extrapolated[i+1,:] = x[i+3,None]*slope[i+1,:] + offset[i+1,:]
-                totalpermut = totalpermut[permut]
-
-        if self.period is not None:
-            x = x[2:]
-            y = y[2:,:]
-
-        self.totalpermut = totalpermut
-        self.totalpermut_inv = totalpermut.argsort()
-        self.y = y
-
-    def refine_crossing(self):
-        x = self.x
-        y = self.y
-
-        if self.period is not None:
-            x = concatenate((
-                x[-2:] - self.period,
-                x,
-            ))
-            y = concatenate((
-                y[-2:,:],
-                y,
-            ),axis=0)
-
-        xdiff = x[1:] - x[:-1]
-        ydiff = y[1:,:] - y[:-1,:]
-        slope = ydiff/xdiff[:,None]
-        offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None])/xdiff[:,None]
-
-        y_right_extrapolated = x[2:,None]*slope[:-1,:] + offset[:-1,:]
-        totalpermut = arange(y.shape[1])
-        for i in range(len(x)-2):
-            permut = argsort(y_right_extrapolated[i])
-            if any(permut[1:]<permut[:-1]):
-#               print "swapping at %i, x=%g: "%(i,x[i+1]),permut
-                # contains a swap
-                y[:i+2,:] = y[:i+2,permut]
-                if i+3<len(x):
-                    ydiff[i+1,:] = y[i+2,:] - y[i+1,:]
-#                ydiff[:i+1,:] = ydiff[:i+1,permut]
-                    slope[i+1,:] = ydiff[i+1,:]/xdiff[i+1,None]
-#                slope[:i+1,:] = slope[:i+1,permut]
-                    offset[i+1,:] = (y[i+1,:]*x[i+2,None] - y[i+2,:]*x[i+1,None])/xdiff[i+1,None]
-#                offset[:i+1,:] = offset[:i+1,permut]
-                    y_right_extrapolated[i+1,:] = x[i+3,None]*slope[i+1,:] + offset[i+1,:]
-                totalpermut = totalpermut[permut]
-
-        if self.period is not None:
-            x = x[2:]
-            y = y[2:,:]
-
-        self.totalpermut = totalpermut
-        self.y = y
+        offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None]) / xdiff[:,None]
+        return slope[segm_idx] * xgrid[:,None] + offset[segm_idx]
 
 
-if False:
+    def integrate(self):
+	res = ((self.x[2:] - self.x[:-2])[:,None] * self.y[1:-1,:]).sum(axis=0)
+	if self.period is None:
+	    res += (self.x[1] - self.x[0]) * self.y[0,:]
+	    res += (self.x[-1] - self.x[-2]) * self.y[-1,:]
+	else:
+	    res += (self.x[1] - self.x[-1] - self.period) * self.y[0,:]
+	    res += (self.x[0] - self.x[-2] - self.period) * self.y[-1,:]
+	return 0.5*res
 
-    def refine_extrema_old(self,xlims=None):
-        y = reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
-        diff = y[1:,:] - y[:-1,:]
-        flatpoints = (diff == 0).any(1)
-        extrema = zeros(self.x.shape,bool)
-        extrema[1:-1] = (diff[1:,:] * diff[:-1,:] < 0).any(1)
-        if self.period is not None:
-            diff_wrap = self.y[0,:] - self.y[-1,:]
-            extrema[0] = ((diff_wrap * diff[0,...]) < 0).any()
-            extrema[-1] = ((diff[-1,...] * diff_wrap) < 0).any()
-            if extrema[0] or extrema[-1] or (diff_wrap == 0).any():
-                self.addpoints([(self.x[0] + self.period + self.x[-1])/2])
-        xsplit = (self.x[1:] + self.x[:-1]) / 2
-        self.addpoints(compress(extrema[1:] | flatpoints | extrema[:-1],xsplit),xlims=xlims)
-
-
-
-    def refine_bends(self,maxquot=1.3):
-        assert False # not yet adjusted to new self.period
-        assert maxquot > 1.0
-        y = reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
-        diff = y[1:,:] - self.y[:-1,:]
-        slope = diff / (self.x[1:,None] - self.x[:-1,None])
-        bend = slope[:-1,:] / slope[1:,:]
-
-        issharp = ((bend < 1/maxquot) | (bend > maxquot) | isinf(bend)).any(1)
-        issharp_at_boundary = False
-        if self.periodic:
-            bend_at_boundary = slope[-1,:] / slope[1,:]
-            issharp_at_boundary = any((bend_at_boundary < 1/maxquot) | (bend_at_boundary > maxquot) | isinf(bend_at_boundary))
-        issharp = concatenate(([issharp_at_boundary],issharp,[issharp_at_boundary]))
-        xsplit = (self.x[1:] + self.x[:-1]) / 2
-
-        self.addpoints(compress(issharp[1:] | issharp[:-1],xsplit))
-
-
-
-#     def refine_sharp_bends_old(self,maxbend=None):
-#         y = reshape(self.y,(self.y.shape[0],prod(self.y.shape[1:])))
-#         diff = (y[1:,:] - y[:-1,:]) / (self.x[1:,None] - self.x[:-1,None])
-#         diff2 = diff[1:,:] - diff[:-1,:]
-#         maxdiff2 = amax(abs(diff2),axis=-1)
-#         if maxbend is None:
-#             maxbend = max(maxdiff2) / 10
-#         print "maxbend ="
-#         print maxbend
-#         sharp_bends = maxdiff2 > maxbend
-#
-#         sharp_bend_at_boundary = False
-#         if self.periodic:
-#             sharp_bend_at_boundary = sometrue(ravel(abs(diff[0,...] - diff[-1,...]) > maxbend))
-#         sharp_bends = concatenate(([sharp_bend_at_boundary],sharp_bends,[sharp_bend_at_boundary]))
-#         xsplit = (self.x[1:] + self.x[:-1]) / 2
-#
-#         self.addpoints(compress(sharp_bends[1:] | sharp_bends[:-1],xsplit))
-#
-#
 
 if __name__ == '__main__':
     import cnt,chain
