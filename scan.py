@@ -95,6 +95,13 @@ class scan_adaptive:
         self._initshape()
 
 
+    def do_scan(self):
+        oldN = 0
+        while len(self.x) > oldN:
+            oldN = len(self.x)
+            self.refine_visible()
+
+
     def interpolate_linear(self,xgrid):
         x = self.x[:]
         y = self.y[:,:]
@@ -452,6 +459,78 @@ class scan_adaptive:
             xsplit += (rand(len(x)-1) - 0.5) * (x[1:] - x[:-1]) * self.randomize
         self.addpoints(compress(select,xsplit),xlims=xlims_arg,internalcall=True)
 
+
+    def reduce_visible(self,xlims=None,ylims=None,xminstep=None,yminstep=None):
+        self.debugout("reduce visible: Nold=%i, "%(len(self.x)))
+        x = self.x
+        y = self.y[:,self.masksensitive]
+
+        xlims_arg = xlims
+        if xlims is None:
+            xlims = self.xlims
+        if xlims is None:
+            if self.period is None:
+                xlims = (x[0],x[-1])
+            else:
+                xlims = (0,self.period)
+
+        if xminstep is None:
+            xminstep = self.xminstep
+        if xminstep is None:
+            xminstep = (xlims[1] - xlims[0]) * self.precision
+
+        if ylims is None:
+            ylims = self.ylims
+        if ylims is None:
+            if self.sameyscale:
+                ylims = (asarray(y.ravel().min())[None],asarray(y.ravel().max())[None])
+            else:
+                ylims = (y.min(axis=0),y.max(axis=0))
+        else:
+            if not self.sameyscale:
+                ylims = (ylims[0][self.masksensitive],ylims[1][self.masksensitive])
+
+        if yminstep is None:
+            yminstep = self.yminstep
+        if yminstep is None:
+            yminstep = (ylims[1] - ylims[0]) * self.precision
+
+        if self.period is not None:
+            x = concatenate((
+                x[-2:] - self.period,
+                x,
+                x[:2] + self.period,
+            ))
+            y = concatenate((
+                y[-2:,:],
+                y,
+                y[:2,:],
+            ),axis=0)
+
+        xdiff = x[1:] - x[:-1]
+        xdiff2 = x[2:] - x[:-2]
+        ydiff = y[1:,:] - y[:-1,:]
+        slope = ydiff/xdiff[:,None]
+        offset = (y[:-1,:]*x[1:,None] - y[1:,:]*x[:-1,None])/xdiff[:,None]
+
+        # linear interpolation: y1 = ((x1-x0)*y2 + (x2-x1)*y0)/(x2-x0)
+        y_interpolated = (xdiff[:-1,None]*y[2:,:] + xdiff[1:,None] * y[:-2,:]) / xdiff2[:,None]
+        y_interpolated_error = abs(y_interpolated - y[1:-1,:])
+
+        select = ones(self.x.shape,bool)
+        select[1:-1] &= (y_interpolated_error > yminstep).any(axis=1)
+
+        self.debugout("interpolatable: %i"%(len(self.x) - select.sum()))
+
+        select[1:(len(select)//2)*2:2] |= ~select[0:(len(select)//2)*2:2]
+        select[1:((len(select)-1)//2)*2+1:2] |= ~select[2:((len(select)-1)//2)*2+1:2]
+
+        self.debugout("remove: %i\n"%(len(self.x) - select.sum()))
+
+        self.x = self.x[select]
+        self.y = self.y[select,:]
+
+
     def refine_valuecut(self,value,xminstep=None):
         shifted = self.y - value
         sgnchange = (shifted[1:,:] * shifted[:-1,:]) < 0
@@ -476,15 +555,18 @@ class scan_adaptive:
             ))
             addyvals = y[:1,:]
             if hasattr(self,'totalpermut'):
-                addyvals = addyvals[:,self.totalpermut]
+                addyvals = addyvals[:,self.totalpermut_inv]
             y = concatenate((
                 y,
                 addyvals,
             ),axis=0)
 
         shifted = y - value
-        sgnleft = sign(shifted[:-1,:])
-        sgnright = sign(shifted[1:,:])
+        sgn = 2.0 * (shifted >= 0) - 1.0
+#       sgn = sign(shifted)
+#       sgn[sng == 0.0] = 1.0
+        sgnleft = sgn[:-1,:]
+        sgnright = sgn[1:,:]
         sgnchange = (sgnright - sgnleft)/2.
         sel, = sgnchange.any(axis=1).nonzero()
         x0 = x[sel][:,None]
@@ -529,16 +611,11 @@ class scan_adaptive:
         for i in range(len(x)-2):
             permut = argsort(y_right_extrapolated[i])
             if any(permut[1:]<permut[:-1]):
-#               print "swapping at %i, x=%g: "%(i,x[i+1]),permut
-                # contains a swap
                 y[:i+2,:] = y[:i+2,permut]
                 if i+3<len(x):
                     ydiff[i+1,:] = y[i+2,:] - y[i+1,:]
-#                ydiff[:i+1,:] = ydiff[:i+1,permut]
                     slope[i+1,:] = ydiff[i+1,:]/xdiff[i+1,None]
-#                slope[:i+1,:] = slope[:i+1,permut]
                     offset[i+1,:] = (y[i+1,:]*x[i+2,None] - y[i+2,:]*x[i+1,None])/xdiff[i+1,None]
-#                offset[:i+1,:] = offset[:i+1,permut]
                     y_right_extrapolated[i+1,:] = x[i+3,None]*slope[i+1,:] + offset[i+1,:]
                 totalpermut = totalpermut[permut]
 
@@ -547,6 +624,7 @@ class scan_adaptive:
             y = y[2:,:]
 
         self.totalpermut = totalpermut
+        self.totalpermut_inv = totalpermut.argsort()
         self.y = y
 
     def refine_crossing(self):
