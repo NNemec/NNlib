@@ -126,7 +126,7 @@ class chain:
         return self._G_bulk
 
     def H_eff(self,k):
-        res = self.H[0] + 0.0
+        res = self.H[0] + 0.0j
         def adjsum(a):
             return a + a.H
         for i in range(1,len(self.H)):
@@ -134,7 +134,7 @@ class chain:
         return res
 
     def S_eff(self,k):
-        res = self.S[0].copy()
+        res = self.S[0] + 0.0j
         if self.nonorthogonal:
             def adjsum(a):
                 return a + a.H
@@ -144,6 +144,8 @@ class chain:
 
     def band_energies(self,k):
         if self.nonorthogonal:
+#            X = self.S_eff(k).I * self.H_eff(k)
+#            return array(sorted(list(real(scipy.linalg.eigvals(X)))))
             return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(k),self.S_eff(k))))))
         else:
             return array(sorted(list(real(eigvalsh(self.H_eff(k))))))
