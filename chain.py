@@ -15,7 +15,7 @@ class chain:
         for h_b0 in H_B0:
             assert type(h_b0) is matrix
             assert h_b0.shape == (N,N)
-	    assert h_b0.dtype == H_B0[0].dtype
+            assert h_b0.dtype == H_B0[0].dtype
         self.H = H_B0
         self.H_B0 = H_B0
 
@@ -31,7 +31,7 @@ class chain:
             for s in S:
                 assert type(s) is matrix
                 assert s.shape == (N,N)
-	        assert s.dtype == S[0].dtype
+                assert s.dtype == S[0].dtype
             self.S = S
         else:
             self.S = [ matrix(eye(N)) ] + [ matrix(zeros((N,N))) ] * (len(H_B0)-1)
@@ -67,7 +67,7 @@ class chain:
             if energy != self.energy or any(Sigma != self.Sigma):
                 (self._G_bulk,self._Gs_L,self._Gs_R) = (None,None,None)
             self.energy = energy
-	self.Sigma = Sigma
+        self.Sigma = Sigma
         if self._G_bulk is None:
             if hasattr(self,'cache') and self.energy in self.cache and all(Sigma == 0.0):
                 (self._G_bulk,self._Gs_L,self._Gs_R) = self.cache[self.energy]
@@ -95,7 +95,9 @@ class chain:
         epsilon_R = epsilon
 
         i = 0;
-        EPS = param.LOPEZ_SANCHO_EPSILON;
+#        while norm(alpha) + norm(beta) > norm(epsilon) * 1e-5:
+
+        EPS = param.LOPEZ_SANCHO_EPSILON
         while abs(alpha).A.sum() + abs(beta).A.sum() > EPS:
             gamma = epsilon.I
             temp_agb = alpha*gamma*beta
@@ -176,13 +178,46 @@ class chain:
             ESh_Hh_1 = E*self.S[1].H - self.H[1].H
         else:
             ES_H_1 = - self.H[1]
-            EaS_aH_1 = - self.H[1].H
+            ESh_Hh_1 = - self.H[1].H
         Sigma_L = ESh_Hh_1 * self.Gs_L() * ES_H_1
         Sigma_R = ES_H_1 * self.Gs_R() * ESh_Hh_1
         Gamma_L = 1j*(Sigma_L - Sigma_L.H)
         Gamma_R = 1j*(Sigma_R - Sigma_R.H)
         Gc = (E*self.S[0]-self.H[0]-Sigma-Sigma_L-Sigma_R).I
         return real(trace(Gamma_L * Gc * Gamma_R * Gc.H))
+
+    def transmission_new(self,energy=None, Sigma=0.0):
+        assert len(self.H) == 2
+        N = self.N_orbitals
+        self.set_energy(energy, Sigma=Sigma)
+        E = (self.energy+1j*param.LOPEZ_SANCHO_ETA)
+        ES_H_0 = E*self.S[0] - self.H[0] - Sigma
+        if self.nonorthogonal:
+            ES_H_1 = E*self.S[1] - self.H[1]
+            ESh_Hh_1 = E*self.S[1].H - self.H[1].H
+        else:
+            ES_H_1 = - self.H[1]
+            ESh_Hh_1 = - self.H[1].H
+        Sigma_L = ESh_Hh_1 * self.Gs_L() * ES_H_1
+        Sigma_R = ES_H_1 * self.Gs_R() * ESh_Hh_1
+
+        A_L = 1j*(self.Gs_L() - self.Gs_L().H)
+        A_R = 1j*(self.Gs_R() - self.Gs_R().H)
+
+        Gamma_L = 1j*(Sigma_L - Sigma_L.H)
+        Gamma_R = 1j*(Sigma_R - Sigma_R.H)
+        E_H_c = bmat([[ES_H_0 - Sigma_L, ES_H_1          ],
+                      [ESh_Hh_1        , ES_H_0 - Sigma_R]])
+        Gc = E_H_c.I
+
+        V = bmat([[ zeros((N,N))  ,   ES_H_1 ],
+                  [ ES_H_1.H , zeros((N,N)) ]])
+
+        V_VGV = V - V*Gc*V
+
+        V_VGV_01 = V_VGV[0:self.N_orbitals,self.N_orbitals:]
+
+        return real(trace(A_L * V_VGV_01 * A_R * V_VGV_01.H))
 
     def multiply(self,N = None):
         if N == None:
