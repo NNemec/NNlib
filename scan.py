@@ -587,6 +587,13 @@ class scan_adaptive:
 	return 0.5*res
 
 
+    def average(self):
+	if self.period is None:
+	    return self.integrate() / (self.x[-1] - self.x[0])
+	else:
+	    return self.integrate() / (self.period)
+
+
 if __name__ == '__main__':
     import cnt,chain
     import units
