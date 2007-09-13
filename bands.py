@@ -2,7 +2,6 @@
 
 from scan import scan_adaptive
 from numpy import *
-from units import *
 
 def floor(x):
     return int(x//1.0)
@@ -84,6 +83,8 @@ class scan_bands(scan_adaptive):
             calccutx=True,
             calcslopesign=True,
         )
+	if len(kcut) == 0:
+	    return sum(self.y[0,:] < maxenergy)
         NOS = sum(signcut*kcut) / (2*pi)
         NOS += sum(self.y[0,:] < maxenergy) # to add bands that wrap to next brillouin zone
         return NOS
@@ -106,11 +107,12 @@ class scan_bands(scan_adaptive):
         NOSmin = self.calc_NOS(Emin)
 
         while (Emax - Emin) > yminstep or (NOSmax-NOSmin) > self.precision:
-            Emid = (NOE-NOSmin) * (Emax-Emin) / (NOSmax-NOSmin) + Emin
+            Emid = (Emax-Emin) * ((NOE-NOSmin)*1.0 / (NOSmax-NOSmin)) + Emin
             NOSmid = self.calc_NOS(Emid)
+
 	    assert Emin <= Emid 
 	    assert Emid <= Emax 
-            print Emax/eV,Emin/eV,NOSmax,NOSmin,Emid/eV,NOSmid
+		
             if NOSmid > NOE:
 		if Emax - Emid < yminstep:
 		    return Emid
@@ -122,25 +124,34 @@ class scan_bands(scan_adaptive):
                 Emin = Emid
                 NOSmin = NOSmid
             else:
+		if (asarray(NOSmid).dtype.kind == 'i') and (NOSmid > 0) and (NOSmid < len(self.y[0,:])):
+    		    Emin = self.y[:,:NOSmid].max()
+		    Emax = self.y[:,NOSmid:].min()
+		    Emid = (Emin+Emax) / 2
+		    
+		assert Emin <= Emid 
+		assert Emid <= Emax
+
                 return Emid
 
         return (Emin+Emax) / 2
 
 
 if __name__ == "__main__":
-    import cnt, tightbinding, units
+    import cnt, tightbinding
     import chain as NNlib_chain
+    from units import eV
 
     papa = tightbinding.papaconstantopoulos("c_par.105.tbparam")
 
-    xyz = cnt.GNR_zigzag(6)
+    xyz = cnt.GNR_armchair(10)
     chain = papa.setup_chain(xyz)
     chain = NNlib_chain.chain([h[2::4,2::4] for h in chain.H],chain.xyz,S=[s[2::4,2::4] for s in chain.S])
     chain = chain.multiply()
     
     scan = scan_bands(
 	chain,
-	precision=1e-3,
+	precision=1e-4,
 	verbose=True,
     )
     scan.do_scan()
@@ -177,7 +188,7 @@ if __name__ == "__main__":
 	calc_DOS,
 	linspace(Emin,Emax,5),
 	verbose = True,
-	precision = 1e-3,
+	precision = 1e-4,
     )
     scan_DOS.do_scan()
 
@@ -188,7 +199,7 @@ if __name__ == "__main__":
 	calc_NOS,
 	linspace(Emin,Emax,5),
 	verbose = True,
-	precision = 1e-3,
+	precision = 1e-4,
     )
     scan_NOS.do_scan()
 
@@ -200,7 +211,7 @@ if __name__ == "__main__":
     for b in range(scan.Nbands):
         pylab.plot(band_k,band_energy[:,b] / eV,'.-')
     for i in range(len(NOE)):
-        print "%i: %g eV, %g electrons"%(NOE[i],E_F[i]/units.eV,scan.calc_NOS(E_F[i]))
+        print "%i: %g eV, %g electrons"%(NOE[i],E_F[i]/eV,scan.calc_NOS(E_F[i]))
         pylab.axhline(E_F[i] / eV)
 
     pylab.subplot(1,3,2)
@@ -208,6 +219,7 @@ if __name__ == "__main__":
     for i in range(10):
 	scan_DOS.reduce_visible()
     pylab.plot(scan_DOS.y,scan_DOS.x / eV,'.-')
+    pylab.xlim([-0.5,5.0]*scan_DOS.average())
 
     pylab.subplot(1,3,3)
     pylab.plot(scan_NOS.y,scan_NOS.x / eV,'.')
