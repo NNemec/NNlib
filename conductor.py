@@ -16,10 +16,10 @@ class conductor:
         assert len(H_int)==len(N)
         assert len(H_hop)==len(N)-1
         for i in range(len(N)):
-            assert type(H_int[i]) == type(Matrix(()))
+            assert type(H_int[i]) == type(matrix(()))
             assert shape(H_int[i]) == (N[i],N[i])
         for i in range(len(N)-1):
-            assert type(H_hop[i]) == type(Matrix(()))
+            assert type(H_hop[i]) == type(matrix(()))
             assert shape(H_hop[i]) == (N[i],N[i+1])
         self.N = N
 	if xyz is not None:
@@ -58,7 +58,7 @@ class conductor:
         self.energy = energy
 
     def H_full(self):
-        res = Matrix(zeros((sum(self.N),sum(self.N)),'D'))
+        res = matrix(zeros((sum(self.N),sum(self.N)),'D'))
         N = self.N[0]
         N_old = 0
         res[0:N,0:N] = self.H_int[0]
@@ -67,7 +67,7 @@ class conductor:
             N_old = N
             N += self.N[i]
             res[N_veryold:N_old,N_old:N] = self.H_hop[i-1]
-            res[N_old:N,N_veryold:N_old] = adj(self.H_hop[i-1])
+            res[N_old:N,N_veryold:N_old] = self.H_hop[i-1].H
             res[N_old:N,N_old:N] = self.H_int[i]
         if self.disorder != 0:
             import random
@@ -84,10 +84,10 @@ class conductor:
             import random
             rng = random.Random(self.disorder_seed)
         assert len(self.N) > 1
-        E_H_eff_LL = self.energy * Matrix(eye(self.N[0])) - self.H_int[0]
+        E_H_eff_LL = self.energy * matrix(eye(self.N[0])) - self.H_int[0]
         E_H_eff_LR = - self.H_hop[0]
-        E_H_eff_RR = self.energy * Matrix(eye(self.N[1])) - self.H_int[1]
-        E_H_eff_RL = - adj(self.H_hop[0])
+        E_H_eff_RR = self.energy * matrix(eye(self.N[1])) - self.H_int[1]
+        E_H_eff_RL = - self.H_hop[0].H
         if self.disorder != 0:
             for i in range(self.N[0]):
                 E_H_eff_LL[i,i] -= (rng.random()-0.5) * self.disorder
@@ -98,12 +98,12 @@ class conductor:
             E_H_eff_XX = E_H_eff_RR
             E_H_eff_XL = E_H_eff_RL
             E_H_eff_XR = - self.H_hop[n-1]
-            E_H_eff_RR = self.energy * Matrix(eye(self.N[n])) - self.H_int[n]
-            E_H_eff_RX = - adj(self.H_hop[n-1])
+            E_H_eff_RR = self.energy * matrix(eye(self.N[n])) - self.H_int[n]
+            E_H_eff_RX = - self.H_hop[n-1].H
             if self.disorder != 0:
                 for i in range(self.N[n]):
                     E_H_eff_RR[i,i] -= (rng.random()-0.5) * self.disorder
-            G_XX = inv(E_H_eff_XX)
+            G_XX = E_H_eff_XX.I
             dot_XL = G_XX*E_H_eff_XL
             dot_XR = G_XX*E_H_eff_XR
             E_H_eff_LL = E_H_eff_LL - E_H_eff_LX*dot_XL
@@ -113,16 +113,16 @@ class conductor:
         return (E_H_eff_LL,E_H_eff_LR,E_H_eff_RL,E_H_eff_RR)
 
     def transmission_old(self,Sigma_L,Sigma_R):
-        Gamma_L = 1j*(Sigma_L - adj(Sigma_L))
-        Gamma_R = 1j*(Sigma_R - adj(Sigma_R))
+        Gamma_L = 1j*(Sigma_L - Sigma_L.H)
+        Gamma_R = 1j*(Sigma_R - Sigma_R.H)
         (E_H_eff_LL,E_H_eff_LR,E_H_eff_RL,E_H_eff_RR) = self.E_H_eff()
         E_H_eff = r_[
             c_[E_H_eff_LL - Sigma_L,E_H_eff_LR],
             c_[E_H_eff_RL,E_H_eff_RR - Sigma_R]
         ]
-        Gc = inv(E_H_eff)
+        Gc = E_H_eff.I
         Gc_LR = Gc[0:len(Sigma_L),len(Sigma_L):len(Gc)]
-        transmission = real(trace(Gamma_L*Gc_LR*Gamma_R*adj(Gc_LR)))
+        transmission = real(trace(Gamma_L*Gc_LR*Gamma_R*Gc_LR.H))
         return transmission
 
     def transmission_new(self,Sigma_0_L,Sigma_0_R,Sigma_0_L_offdiag=None,Sigma_0_R_offdiag=None):
@@ -132,7 +132,7 @@ class conductor:
         E_H_int = []
         E_H_hop = []
         for n in range(len(self.N)):
-            E_H_int.append(self.energy*Matrix(eye(self.N[n])) - self.H_int[n])
+            E_H_int.append(self.energy*matrix(eye(self.N[n])) - self.H_int[n])
             if n>0:
                 E_H_hop.append(- self.H_hop[n-1])
         disorder_range = range(len(self.N))
@@ -169,40 +169,40 @@ class conductor:
         Sigma_L = Sigma_0_L[0]
         for n in range(len(Sigma_0_L)-1):
             E_H_eff_L = E_H_int[n] - Sigma_L
-            Gs_L = inv(E_H_eff_L)
+            Gs_L = E_H_eff_L.I
             if Sigma_0_L_offdiag is not None:
                 E_H_hop_eff_01 = E_H_hop[n] - Sigma_01_L[n]
-                E_H_hop_eff_10 = adj(E_H_hop[n]) - Sigma_10_L[n]
+                E_H_hop_eff_10 = E_H_hop[n].H - Sigma_10_L[n]
             else:
                 E_H_hop_eff_01 = E_H_hop[n]
-                E_H_hop_eff_10 = adj(E_H_hop[n])
+                E_H_hop_eff_10 = E_H_hop[n].H
             Sigma_L = E_H_hop_eff_10*Gs_L*E_H_hop_eff_01 + Sigma_0_L[n + 1]
         for n in range(len(Sigma_0_L)-1,FINAL_CELL):
             E_H_eff_L = E_H_int[n] - Sigma_L
-            Gs_L = inv(E_H_eff_L)
-            Sigma_L = adj(E_H_hop[n])*Gs_L*E_H_hop[n]
+            Gs_L = E_H_eff_L.I
+            Sigma_L = E_H_hop[n].H*Gs_L*E_H_hop[n]
 
         Sigma_R = Sigma_0_R[-1]
         for n in range(-1,-len(Sigma_0_R),-1):
             E_H_eff_R = E_H_int[n] - Sigma_R
-            Gs_R = inv(E_H_eff_R)
+            Gs_R = E_H_eff_R.I
             if Sigma_0_R_offdiag is not None:
                 E_H_hop_eff_01 = E_H_hop[n] - Sigma_01_R[n]
-                E_H_hop_eff_10 = adj(E_H_hop[n]) - Sigma_10_R[n]
+                E_H_hop_eff_10 = E_H_hop[n].H - Sigma_10_R[n]
             else:
                 E_H_hop_eff_01 = E_H_hop[n]
-                E_H_hop_eff_10 = adj(E_H_hop[n])
+                E_H_hop_eff_10 = E_H_hop[n].H
             Sigma_R = E_H_hop_eff_01*Gs_R*E_H_hop_eff_10 + Sigma_0_R[n - 1]
         for n in range(-len(Sigma_0_R),FINAL_CELL - len(self.N),-1):
             E_H_eff_R = E_H_int[n] - Sigma_R
-            Gs_R = inv(E_H_eff_R)
-            Sigma_R = E_H_hop[n]*Gs_R*adj(E_H_hop[n])
+            Gs_R = E_H_eff_R.I
+            Sigma_R = E_H_hop[n]*Gs_R*E_H_hop[n].H
 
         E_H_eff_C = E_H_int[FINAL_CELL] - Sigma_L - Sigma_R
-        G_eff_C = inv(E_H_eff_C)
-        Gamma_L = 1j*(Sigma_L - adj(Sigma_L))
-        Gamma_R = 1j*(Sigma_R - adj(Sigma_R))
-        T = Gamma_L*G_eff_C*Gamma_R*adj(G_eff_C)
+        G_eff_C = E_H_eff_C.I
+        Gamma_L = 1j*(Sigma_L - Sigma_L.H)
+        Gamma_R = 1j*(Sigma_R - Sigma_R.H)
+        T = Gamma_L*G_eff_C*Gamma_R*G_eff_C.H
         if param.DO_CALC_CHANNELS:
             transmission = sort(real(eigvals(T)))
             transmission = transmission[:-min(self.N)-1:-1]
@@ -220,10 +220,10 @@ class conductor:
         E_H_01 = []
         E_H_10 = []
         for n in range(len(self.N)):
-            E_H_00.append(self.energy*Matrix(eye(self.N[n])) - self.H_int[n])
+            E_H_00.append(self.energy*matrix(eye(self.N[n])) - self.H_int[n])
             if n>0:
                 E_H_01.append(- self.H_hop[n-1])
-                E_H_10.append(- adj(self.H_hop[n-1]))
+                E_H_10.append(- self.H_hop[n-1].H)
         disorder_range = range(len(self.N))
         if "NO_DISORDER_IN_CONTACTS" in param:
             disorder_range = range(len(Sigma_0_L),len(self.N)-len(Sigma_0_R))
@@ -272,15 +272,15 @@ class conductor:
             Sigma_L = zeros((self.N[0],)*2,'D')
             for n in range(i):
                 E_H_eff_L = E_H_00[n] - Sigma_L
-                Gs_L = inv(E_H_eff_L)
+                Gs_L = E_H_eff_L.I
                 Sigma_L = E_H_10[n] * Gs_L * E_H_01[n]
             Sigma_R = zeros((self.N[0],)*2,'D')
             for n in range(-1,i-len(self.N),-1):
                 E_H_eff_R = E_H_00[n] - Sigma_R
-                Gs_R = inv(E_H_eff_R)
+                Gs_R = E_H_eff_R.I
                 Sigma_R = E_H_01[n] * Gs_R * E_H_10[n]
             E_H_eff = E_H_00[i] - Sigma_L - Sigma_R
-            G = inv(E_H_eff)
+            G = E_H_eff.I
             res.append(-imag(diag(G))/pi)
 
         return res
@@ -317,7 +317,7 @@ def create_from_aperiodic_pi_orbital(aperiodic):
     for i in range(len(xyz)):
         at = xyz[i].atoms
         N = len(at)
-        h_int = Matrix(zeros((N,N),'D'))
+        h_int = matrix(zeros((N,N),'D'))
         for m in range(N):
           for n in range(m+1,N):
 #            if at[n].pos[2] - at[m].pos[2] > Z_CUTOFF:
@@ -332,7 +332,7 @@ def create_from_aperiodic_pi_orbital(aperiodic):
         at_B = xyz[i].atoms
         M = len(at_A)
         N = len(at_B)
-        h_hop = Matrix(zeros((M,N),'D'))
+        h_hop = matrix(zeros((M,N),'D'))
         for m in range(M):
           for n in range(N):
 #            if at_B[n].pos[2] - at_A[m].pos[2] > Z_CUTOFF:
@@ -353,6 +353,12 @@ def create_from_aperiodic_triozon(aperiodic):
     TRIO_CUTOFF = param.TRIOZON_CUTOFF
     Z_CUTOFF = param.TRIOZON_Z_CUTOFF
 
+    def vdot(a,b):
+	sum = 0.0
+        for i in range(len(a)):
+            sum += a[i]*b[i]
+        return sum
+
     def hopping(pos_a,pos_b):
         if abs(norm(pos_a[:2])-norm(pos_b[:2])) < CC_DIST*0.1:
             if norm(pos_a - pos_b) < CC_DIST*1.1:
@@ -369,7 +375,7 @@ def create_from_aperiodic_triozon(aperiodic):
     for i in range(len(xyz)):
         at = xyz[i].atoms
         N = len(at)
-        h_int = Matrix(zeros((N,N),'D'))
+        h_int = matrix(zeros((N,N),'D'))
         for m in range(N):
           for n in range(m+1,N):
             if at[n].pos[2] - at[m].pos[2] > Z_CUTOFF:
@@ -384,7 +390,7 @@ def create_from_aperiodic_triozon(aperiodic):
         at_B = xyz[i].atoms
         M = len(at_A)
         N = len(at_B)
-        h_hop = Matrix(zeros((M,N),'D'))
+        h_hop = matrix(zeros((M,N),'D'))
         for m in range(M):
           for n in range(N):
             if at_B[n].pos[2] - at_A[m].pos[2] > Z_CUTOFF:
@@ -405,4 +411,4 @@ if __name__ == "__main__":
     ch = chain.chain(x)
     cd = conductor(ch,length=3)
     cd.set_energy(1*eV)
-    print cd.transmission_new(1j*Matrix(eye(2)),1j*Matrix(eye(2)))
+    print cd.transmission_new(1j*matrix(eye(2)),1j*matrix(eye(2)))

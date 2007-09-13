@@ -7,9 +7,9 @@ class wideband:
         s = contact.shape
         assert(s[0] == s[1])
         N = s[0]
-        self._Gs = Matrix(eye(N))*1.0j*factor
-        self._Sigma_L = adj(self.contact) * self._Gs * self.contact
-        self._Sigma_R = self.contact * self._Gs * adj(self.contact)
+        self._Gs = matrix(eye(N))*1.0j*factor
+        self._Sigma_L = self.contact.H * self._Gs * self.contact
+        self._Sigma_R = self.contact * self._Gs * self.contact.H
 
     def Gs_L(self,energy=None,bfield=None):
         return self._Gs
@@ -37,27 +37,27 @@ class nondiag_wideband_L:
         self._Gs = []
         for n in range(len(contact00)):
             N = contact00[n].shape[0]
-            self._Gs.append(Matrix(eye(N))*1.0j*SDOS)
+            self._Gs.append(matrix(eye(N))*1.0j*SDOS)
         self._Sigma_L_00 = []
         for n in range(len(contact00)):
-            self._Sigma_L_00.append(adj(contact00[n])*self._Gs[n]*contact00[n])
+            self._Sigma_L_00.append(contact00[n].H*self._Gs[n]*contact00[n])
         for n in range(1,len(contact00)):
-            self._Sigma_L_00[n] += adj(contact01[n-1])*self._Gs[n-1]*contact01[n-1]
+            self._Sigma_L_00[n] += contact01[n-1].H*self._Gs[n-1]*contact01[n-1]
         for n in range(len(contact00)-1):
-            self._Sigma_L_00[n] += adj(contact10[n])*self._Gs[n+1]*contact10[n]
+            self._Sigma_L_00[n] += contact10[n].H*self._Gs[n+1]*contact10[n]
 
         self._Sigma_L_01 = []
         for n in range(len(contact00)-1):
             self._Sigma_L_01.append(
-                adj(contact00[n])*self._Gs[n]*contact01[n]
-            +   adj(contact10[n])*self._Gs[n+1]*contact00[n+1]
+                contact00[n].H*self._Gs[n]*contact01[n]
+            +   contact10[n].H*self._Gs[n+1]*contact00[n+1]
             )
 
         self._Sigma_L_10 = []
         for n in range(len(contact00)-1):
             self._Sigma_L_10.append(
-                adj(contact01[n])*self._Gs[n]*contact00[n]
-            +   adj(contact00[n+1])*self._Gs[n+1]*contact10[n]
+                contact01[n].H*self._Gs[n]*contact00[n]
+            +   contact00[n+1].H*self._Gs[n+1]*contact10[n]
             )
 
     def Gs_L(self,energy=None,bfield=None):
@@ -84,27 +84,27 @@ class nondiag_wideband_R:
         self._Gs = []
         for n in range(len(contact00)):
             N = contact00[n].shape[1]
-            self._Gs.append(Matrix(eye(N))*1.0j*SDOS)
+            self._Gs.append(matrix(eye(N))*1.0j*SDOS)
         self._Sigma_R_00 = []
         for n in range(len(contact00)):
-            self._Sigma_R_00.append(contact00[n]*self._Gs[n]*adj(contact00[n]))
+            self._Sigma_R_00.append(contact00[n]*self._Gs[n]*contact00[n].H)
         for n in range(1,len(contact00)):
-            self._Sigma_R_00[n] += contact10[n-1]*self._Gs[n-1]*adj(contact10[n-1])
+            self._Sigma_R_00[n] += contact10[n-1]*self._Gs[n-1]*contact10[n-1].H
         for n in range(len(contact00)-1):
-            self._Sigma_R_00[n] += contact01[n]*self._Gs[n+1]*adj(contact01[n])
+            self._Sigma_R_00[n] += contact01[n]*self._Gs[n+1]*contact01[n].H
 
         self._Sigma_R_01 = []
         for n in range(len(contact00)-1):
             self._Sigma_R_01.append(
-                contact00[n]*self._Gs[n]*adj(contact10[n])
-            +   contact01[n]*self._Gs[n+1]*adj(contact00[n+1])
+                contact00[n]*self._Gs[n]*contact10[n].H
+            +   contact01[n]*self._Gs[n+1]*contact00[n+1].H
             )
 
         self._Sigma_R_10 = []
         for n in range(len(contact00)-1):
             self._Sigma_R_10.append(
-                contact10[n]*self._Gs[n]*adj(contact00[n])
-            +   contact00[n+1]*self._Gs[n+1]*adj(contact01[n])
+                contact10[n]*self._Gs[n]*contact00[n].H
+            +   contact00[n+1]*self._Gs[n+1]*contact01[n].H
             )
 
     def Gs_R(self,energy=None,bfield=None):
@@ -142,7 +142,7 @@ class lopez_sancho:
 
     def Sigma_L(self,energy=None):
         return (
-            adj(self.chain.H[1])
+            self.chain.H[1].H
             * self.Gs_L(energy)
             * self.chain.H[1]
             * self.tunneling**2
@@ -152,7 +152,7 @@ class lopez_sancho:
         return (
             self.chain.H[1]
             * self.Gs_R(energy)
-            * adj(self.chain.H[1])
+            * self.chain.H[1].H
             * self.tunneling**2
         )
 

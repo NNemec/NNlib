@@ -129,11 +129,11 @@ def create_from_chain(chain,conductor_size,contact_size_L=1,contact_size_R=1):
 
     elif param.LEAD_TYPE == 'coating_wideband':
         if 'COATING_WIDEBAND_N_CONTACT' in param:
-            contact = Matrix(zeros((chain.N_atoms,)*2,'D'))
+            contact = matrix(zeros((chain.N_atoms,)*2,'D'))
             for n in range(param.COATING_WIDEBAND_N_CONTACT):
                 contact[n,n] = 1.0*eV
         else:
-            contact = Matrix(eye(chain.N_atoms))*1.0*eV
+            contact = matrix(eye(chain.N_atoms))*1.0*eV
         lead = _lead.wideband(
             contact = contact,
             factor=param.WIDEBAND_ENERGY/eV**2,
@@ -162,7 +162,7 @@ def create_from_aperiodic(aperiodic,contact_length_L,contact_length_R):
     finished = False
     for n in range(len(aperiodic.cells)):
         atoms = aperiodic.cells[n].atoms
-        contact = Matrix(zeros((len(atoms),)*2,'D'))
+        contact = matrix(zeros((len(atoms),)*2,'D'))
         j = 0
         for i in range(len(atoms)):
             if atoms[i].pos[2] > contact_length_L:
@@ -180,7 +180,7 @@ def create_from_aperiodic(aperiodic,contact_length_L,contact_length_R):
 
     for n in reversed(range(len(aperiodic.cells))):
         atoms = aperiodic.cells[n].atoms
-        contact = Matrix(zeros((len(atoms),)*2,'D'))
+        contact = matrix(zeros((len(atoms),)*2,'D'))
         j = 0
         for i in range(len(atoms)):
             if atoms[i].pos[2] < aperiodic.length - contact_length_R:

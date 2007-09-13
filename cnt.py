@@ -84,6 +84,16 @@ def is_metallic(M,N):
 A_plaquette = param.GRAPHENE_CC_DISTANCE**2 * 3**.5 * 1.5
 # v_F = 1.5/hbar*param.GRAPHENE_CC_DISTANCE*param.GRAPHENE_1STNN_HOPPING
 
+def gcd(a,b):
+    if a>b:
+        a,b = b,a
+    while a != 0:
+        a,b = b%a,a
+    return b
+
+def lcm(a,b):
+    return a*b/gcd(a,b)
+
 def radius(M,N):
     assert M >= 0
     assert N >= 0

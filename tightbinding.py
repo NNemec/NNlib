@@ -105,6 +105,12 @@ def tight_binding_triozon(xyz_coords,do_cache=True,graphite=False):
                         return -BETA * exp((A - d)/DELTA);
                 return 0.0
         else: # MWCNT
+	    def vdot(a,b):
+		sum = 0.0
+    		for i in range(len(a)):
+        	    sum += a[i]*b[i]
+    		return sum
+
             def hopping(pos_a,pos_b):
                 if abs(pos_a[2] - pos_b[2]) > Z_CUTOFF:
                     return 0.0
@@ -140,7 +146,7 @@ def tight_binding_triozon(xyz_coords,do_cache=True,graphite=False):
                     H[0][j,i] = conj(hop)
 
         for n in range(1,100):
-            h = Matrix(zeros((Natoms,Natoms)))
+            h = matrix(zeros((Natoms,Natoms)))
             nonzero = False
             for i in range(Natoms):
                 for j in range(Natoms):

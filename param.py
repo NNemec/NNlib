@@ -1,4 +1,3 @@
-import tables as pytables
 from units import *
 
 class DataDummy:
@@ -33,6 +32,8 @@ class Param:
             setattr(self.data,name,value)
 
     def write(self,data=None):
+	import tables as pytables
+
         if isinstance(data,pytables.Group):
             data = data._v_attrs
         elif isinstance(data,pytables.Leaf):
@@ -47,6 +48,8 @@ class Param:
 	self.write(DataDummy())
 
     def read(self,data):
+	import tables as pytables
+
         if isinstance(data,pytables.Group):
             data = data._v_attrs
         elif isinstance(data,pytables.Leaf):

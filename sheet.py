@@ -150,7 +150,7 @@ class sheet:
         if hasattr(self,'xyz'):
             xyz = self.xyz.multiply(N0,N1)
         H = {}
-        H[0,0] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),self.H[0,0].dtype))
+        H[0,0] = matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),self.H[0,0].dtype))
         for n0 in range(N0):
             for n1 in range(N1):
                 H[0,0][
@@ -165,7 +165,7 @@ class sheet:
                     i1n = (n1+i1) // N1
                     if i0n > 0 or (i0n == 0 and i1n >= 0):
                         if (i0n,i1n) not in H:
-                            H[i0n,i1n] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),self.H[0,0].dtype))
+                            H[i0n,i1n] = matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),self.H[0,0].dtype))
 
                         H[i0n,i1n][
                             (n0*N1+n1)*N_orb:(n0*N1+n1+1)*N_orb,
@@ -176,25 +176,25 @@ class sheet:
                     i1n = (n1-i1) // N1
                     if i0n > 0 or (i0n == 0 and i1n >= 0):
                         if (i0n,i1n) not in H:
-                            H[i0n,i1n] = Matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),self.H[0,0].dtype))
+                            H[i0n,i1n] = matrix(zeros((N0*N1*N_orb,N0*N1*N_orb),self.H[0,0].dtype))
 
                         H[i0n,i1n][
                             (n0*N1+n1)*N_orb:(n0*N1+n1+1)*N_orb,
                             ((n0-i0)%N0*N1+(n1-i1)%N1)*N_orb:((n0-i0)%N0*N1+(n1-i1)%N1+1)*N_orb,
-                        ] = adj(self.H[i0,i1])
+                        ] = self.H[i0,i1].H
 
         return sheet(H,xyz)
 
 def square_lattice(gamma):
     H = {}
-    H[0,0] = Matrix([[0j]])
-    H[0,1] = Matrix([[-gamma + 0j]])
-    H[1,0] = Matrix([[-gamma + 0j]])
+    H[0,0] = matrix([[0j]])
+    H[0,1] = matrix([[-gamma + 0j]])
+    H[1,0] = matrix([[-gamma + 0j]])
     return sheet(H)
 
 def graphene(gamma):
     H = {}
-    H[0,0] = Matrix([[0j,-gamma],[-gamma,0j]])
-    H[0,1] = Matrix([[0j,-gamma],[0j,0j]])
-    H[1,0] = Matrix([[0j,0j],[0j,-gamma]])
+    H[0,0] = matrix([[0j,-gamma],[-gamma,0j]])
+    H[0,1] = matrix([[0j,-gamma],[0j,0j]])
+    H[1,0] = matrix([[0j,0j],[0j,-gamma]])
     return sheet(H)
