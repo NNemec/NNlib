@@ -1,5 +1,6 @@
-from calc import *
-from data import *
+from numpy import *
+import sys
+from time import time
 
 class scan_adaptive:
     def __init__(self,
@@ -63,6 +64,8 @@ class scan_adaptive:
             sys.stdout.flush()
 
     def store(self,h5group,gname):
+	import tables as pytables
+	
         if hasattr(h5group,gname):
             getattr(h5group,gname)._f_remove(recursive=True)
         g = pytables.Group(h5group,gname,new=True)
@@ -81,6 +84,8 @@ class scan_adaptive:
 
 
     def retrieve(self,h5group,gname,optional=False):
+	import tables as pytables
+	
         if not hasattr(h5group,gname):
             assert optional
             return

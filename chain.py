@@ -1,5 +1,5 @@
-from calc import *
-import xyz
+from numpy import *
+from numpy.linalg import *
 from param import param
 from units import *
 
@@ -20,6 +20,8 @@ class chain:
         self.H_B0 = H_B0
 
         if xyz_chain is not None:
+	    import xyz
+
             assert isinstance(xyz_chain,xyz.chain)
             self.xyz = xyz_chain
             self.xyz_shifted = [ xyz_chain.shift(xyz_chain.period * i) for i in range(1,len(H_B0)) ]
