@@ -1,5 +1,6 @@
 from numpy import *
 from numpy.linalg import *
+import scipy, scipy.linalg
 from param import param
 from units import *
 
