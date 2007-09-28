@@ -12,56 +12,158 @@ from calc import *
 
 param.createdefault("GRAPHENE_1STNN_HOPPING", 2.66*eV)
 
-def tight_binding_1stNN_graphene(xyz_coords,do_cache=True):
-    maxdist = param.GRAPHENE_CC_DISTANCE * 1.1
-    gamma = param.GRAPHENE_1STNN_HOPPING
 
-    at = xyz_coords.atoms
-    period = xyz_coords.period
-    N = len(at)
+def graphene_1stNN_params(dist):
+    if dist == 0.0:
+	return (0.0,1.0)
+    elif dist < param.GRAPHENE_CC_DISTANCE * 1.1:
+	return (-gamma,0.0)
+    else:
+	return (0.0,0.0)
 
-    if isinstance(xyz_coords,xyz.chain):
-        H = [ matrix(zeros((N,N))) for i in range(2) ]
+param.createdefault("GRAPHENE_3RDNN_EPSILON0", -0.28*eV)
+param.createdefault("GRAPHENE_3RDNN_GAMMA0", 2.97*eV)
+param.createdefault("GRAPHENE_3RDNN_GAMMA1", 0.073*eV)
+param.createdefault("GRAPHENE_3RDNN_GAMMA2", 0.33*eV)
+param.createdefault("GRAPHENE_3RDNN_S0", 0.073)
+param.createdefault("GRAPHENE_3RDNN_S1", 0.018)
+param.createdefault("GRAPHENE_3RDNN_S2", 0.026)
 
-        for i in range(N):
-            for j in range(i+1,N):
-                if norm(at[i].pos - at[j].pos) < maxdist:
-                    H[0][i,j] = -gamma
-                    H[0][j,i] = -gamma
+#param.createdefault("GRAPHENE_3RDNN_EPSILON0", -2.03*eV)
+#param.createdefault("GRAPHENE_3RDNN_GAMMA0", 2.79*eV)
+#param.createdefault("GRAPHENE_3RDNN_GAMMA1", 0.68*eV)
+#param.createdefault("GRAPHENE_3RDNN_GAMMA2", 0.30*eV)
+#param.createdefault("GRAPHENE_3RDNN_S0", 0.30)
+#param.createdefault("GRAPHENE_3RDNN_S1", 0.046)
+#param.createdefault("GRAPHENE_3RDNN_S2", 0.039)
+
+#param.createdefault("GRAPHENE_3RDNN_EPSILON0", 0.0*eV)
+#param.createdefault("GRAPHENE_3RDNN_GAMMA0", 2.84*eV)
+#param.createdefault("GRAPHENE_3RDNN_GAMMA1", 0.0*eV)
+#param.createdefault("GRAPHENE_3RDNN_GAMMA2", 0.0*eV)
+#param.createdefault("GRAPHENE_3RDNN_S0", 0.07)
+#param.createdefault("GRAPHENE_3RDNN_S1", 0.0)
+#param.createdefault("GRAPHENE_3RDNN_S2", 0.0)
+
+
+def graphene_3rdNN_params(dist):
+    # 1stNN: 1.0
+    # 2ndNN: 1.73 = 3.0**.5
+    # 3rdNN: 2.0
+    # 4thNN: 2.64 = 7.0**.5
+    # 5thNN: 3.0
+    f = dist / param.GRAPHENE_CC_DISTANCE
+    print f,
+    
+    if dist == 0.0:
+	return (param.GRAPHENE_3RDNN_EPSILON0,1.0)
+    elif f < 1.3:
+	return (-param.GRAPHENE_3RDNN_GAMMA0,param.GRAPHENE_3RDNN_S0)
+    elif f < 1.85:
+	return (-param.GRAPHENE_3RDNN_GAMMA1,param.GRAPHENE_3RDNN_S1)
+    elif f < 2.3:
+	return (-param.GRAPHENE_3RDNN_GAMMA2,param.GRAPHENE_3RDNN_S2)
+    else:
+	return (0.0,0.0)
+
+
+def chain_from_params(xyz,params):
+    N = len(xyz.atoms)
+    H = [ matrix(zeros((N,N))) for i in range(2) ]
+    S = [ matrix(zeros((N,N))) for i in range(2) ]
+
+    h00,s00 = params(0.0)
+    assert s00 == 1.0
+
+    for i in range(N):
+        H[0][i,i] = h00
+        for j in range(i+1,N):
+            h,s = params(norm(xyz.atoms[i].pos - xyz.atoms[j].pos))
+	    print h/eV,s
+            H[0][i,j] = h
+            H[0][j,i] = h
+    	    S[0][i,j] = s
+    	    S[0][j,i] = s
+
+    for i in range(N):
+        for j in range(N):
+            h,s = params(norm(xyz.atoms[i].pos - (xyz.atoms[j].pos + xyz.period)))
+	    print h/eV,s
+            H[1][i,j] = h
+            S[1][i,j] = s
+
+    if any(S[0] != 0.0):
+	for i in range(N):
+	    S[0][i,i] = 1.0
+    else:
+	assert all(S[1] == 0.0)
+	S = None
+
+    return chain.chain(H,xyz,S=S)
+
+def sheet_from_params(xyz,params):
+    N = len(xyz.atoms)
+
+    H = {}
+    S = {}
+    H[0,0] = matrix(zeros((N,N)))
+    S[0,0] = matrix(zeros((N,N)))
+
+    h00,s00 = params(0.0)
+    assert s00 == 1.0
+
+    for i in range(N):
+        H[0,0][i,i] = h00
+        for j in range(i+1,N):
+            h,s = params(norm(xyz.atoms[i].pos - xyz.atoms[j].pos))
+            H[0,0][i,j] = h
+            H[0,0][j,i] = h
+            S[0,0][i,j] = s
+            S[0,0][j,i] = s
+
+    if any(S[0,0] != 0.0):
+	for i in range(N):
+	    S[0,0][i,i] = 1.0
+	else:
+	    S = None
+
+    for i0,i1 in [(0,1),(1,1),(1,0),(1,-1)]:
+        shift = i0 * xyz.period[0] + i1 * xyz.period[1]
+
+        H_hop = matrix(zeros((N,N)))
+        S_hop = matrix(zeros((N,N)))
 
         for i in range(N):
             for j in range(N):
-                if norm(at[i].pos - (at[j].pos + period)) < maxdist:
-                    H[1][i,j] = -gamma
+		h,s = params(norm(xyz.atoms[i].pos - (xyz.atoms[j].pos + shift)))
+                H_hop[i,j] = h
+                S_hop[i,j] = h
+		
+        if any(H_hop != 0.0):
+            H[i0,i1] = H_hop
+	    if S is None:
+		assert all(S_hop == 0.0)
+	    else:
+		S[i0,i1] = S_hop
+	else:
+    	    assert all(S_hop == 0.0)
 
-        return chain.chain(H,xyz_coords,do_cache=do_cache)
+    return sheet.sheet(H,xyz,S=S)
+    
 
+def tight_binding_1stNN_graphene(xyz_coords):
+    if isinstance(xyz_coords,xyz.chain):
+	return chain_from_params(xyz_coords,graphene_1stNN_params)
+	
     elif isinstance(xyz_coords,xyz.sheet):
-        H = {}
-        H[0,0] = matrix(zeros((N,N)))
+	return sheet_from_params(xyz_coords,graphene_1stNN_params)
 
-        for i in range(N):
-            for j in range(i+1,N):
-                if norm(at[i].pos - at[j].pos) < maxdist:
-                    H[0,0][i,j] = -gamma
-                    H[0,0][j,i] = -gamma
-
-        for i0,i1 in [(0,1),(1,1),(1,0),(1,-1)]:
-            shift = i0 * period[0] + i1 * period[1]
-
-            H_hop = matrix(zeros((N,N)))
-            nonzero = False
-
-            for i in range(N):
-                for j in range(N):
-                    if norm(at[i].pos - (at[j].pos + shift)) < maxdist:
-                        H_hop[i,j] = -gamma
-                        nonzero = True
-            if nonzero:
-                H[i0,i1] = H_hop
-
-        return sheet.sheet(H,xyz_coords,do_cache=do_cache)
-
+def tight_binding_3rdNN_graphene(xyz_coords):
+    if isinstance(xyz_coords,xyz.chain):
+	return chain_from_params(xyz_coords,graphene_3rdNN_params)
+	
+    elif isinstance(xyz_coords,xyz.sheet):
+	return sheet_from_params(xyz_coords,graphene_3rdNN_params)
 
 
 ###########################
@@ -481,3 +583,15 @@ class papaconstantopoulos:
 
         return sheet.sheet(H,S=S,xyz_sheet=xyz_sheet,do_cache=do_cache)
 
+if __name__ == "__main__":
+    import cnt
+    coords = cnt.swcnt((10,10))
+    chain = tight_binding_3rdNN_graphene(coords)
+
+    set_printoptions(linewidth=10000)
+    
+    for h in chain.H:
+	print h[:20,:20]/eV
+
+    for s in chain.S:
+	print s[:20,:20]
