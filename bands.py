@@ -95,8 +95,8 @@ class scan_bands(scan_adaptive):
         calculate the Fermi energy for a given number of electrons per unit cell (NOS)
         """
 	
-	Emax = self.y.max()
-	Emin = self.y.min()
+	Emax = self.y[~isnan(self.y)].max()
+	Emin = self.y[~isnan(self.y)].min()
 
         if yminstep is None:
             yminstep = self.yminstep
@@ -110,8 +110,8 @@ class scan_bands(scan_adaptive):
             Emid = (Emax-Emin) * ((NOE-NOSmin)*1.0 / (NOSmax-NOSmin)) + Emin
             NOSmid = self.calc_NOS(Emid)
 
-	    assert Emin <= Emid 
-	    assert Emid <= Emax 
+#	    assert Emin <= Emid 
+#	    assert Emid <= Emax 
 		
             if NOSmid > NOE:
 		if Emax - Emid < yminstep:
@@ -129,8 +129,8 @@ class scan_bands(scan_adaptive):
 		    Emax = self.y[:,NOSmid:].min()
 		    Emid = (Emin+Emax) / 2
 		    
-		assert Emin <= Emid 
-		assert Emid <= Emax
+#		assert Emin <= Emid 
+#		assert Emid <= Emax
 
                 return Emid
 
@@ -142,9 +142,13 @@ if __name__ == "__main__":
     import chain as NNlib_chain
     from units import eV
 
-    papa = tightbinding.papaconstantopoulos("c_par.105.tbparam")
+    set_printoptions(linewidth=10000)
+#    xyz = cnt.swcnt((10,10))
+#    xyz = cnt.chiral(10,10)
+    xyz = cnt.GNR_zigzag(37)
+#    chain = tightbinding.tight_binding_3rdNN_graphene(xyz)
 
-    xyz = cnt.GNR_armchair(10)
+    papa = tightbinding.papaconstantopoulos("c_par.105.tbparam")
     chain = papa.setup_chain(xyz)
     chain = NNlib_chain.chain([h[2::4,2::4] for h in chain.H],chain.xyz,S=[s[2::4,2::4] for s in chain.S])
     chain = chain.multiply()
@@ -175,8 +179,8 @@ if __name__ == "__main__":
             addyvals,
         ),axis=0)
 
-    Emin = band_energy.min()
-    Emax = band_energy.max()
+    Emin = band_energy[~isnan(band_energy)].min()
+    Emax = band_energy[~isnan(band_energy)].max()
     Emid = (Emin+Emax)*.5
     Emin = (Emin-Emid)*1.1 + Emid
     Emax = (Emax-Emid)*1.1 + Emid
@@ -188,7 +192,7 @@ if __name__ == "__main__":
 	calc_DOS,
 	linspace(Emin,Emax,5),
 	verbose = True,
-	precision = 1e-4,
+	precision = 1e-3,
     )
     scan_DOS.do_scan()
 
@@ -213,6 +217,7 @@ if __name__ == "__main__":
     for i in range(len(NOE)):
         print "%i: %g eV, %g electrons"%(NOE[i],E_F[i]/eV,scan.calc_NOS(E_F[i]))
         pylab.axhline(E_F[i] / eV)
+    pylab.ylim([Emin/eV,Emax/eV])
 
     pylab.subplot(1,3,2)
     pylab.plot(scan_DOS.y,scan_DOS.x / eV,'.')
@@ -220,11 +225,13 @@ if __name__ == "__main__":
 	scan_DOS.reduce_visible()
     pylab.plot(scan_DOS.y,scan_DOS.x / eV,'.-')
     pylab.xlim([-0.5,5.0]*scan_DOS.average())
+    pylab.ylim([Emin/eV,Emax/eV])
 
     pylab.subplot(1,3,3)
     pylab.plot(scan_NOS.y,scan_NOS.x / eV,'.')
     for i in range(10):
         scan_NOS.reduce_visible()
     pylab.plot(scan_NOS.y,scan_NOS.x / eV,'.-')
+    pylab.ylim([Emin/eV,Emax/eV])
 
     pylab.show()

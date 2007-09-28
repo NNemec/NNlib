@@ -156,7 +156,11 @@ class chain:
         if self.nonorthogonal:
 #            X = self.S_eff(k).I * self.H_eff(k)
 #            return array(sorted(list(real(scipy.linalg.eigvals(X)))))
-            return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(k),self.S_eff(k))))))
+
+	    try:
+        	return array(sorted(list(real(scipy.linalg.eigvals(self.H_eff(k),self.S_eff(k))))))
+	    except LinAlgError:
+		return zeros((self.N_orbitals,)) / 0.0
         else:
             return array(sorted(list(real(eigvalsh(self.H_eff(k))))))
 
