@@ -101,7 +101,10 @@ class scan_adaptive:
         while len(self.x) > oldN:
             oldN = len(self.x)
             self.refine_visible()
-
+	nans = isnan(self.y).any(axis=1)
+	if any(nans):
+	    self.x = self.x[~nans]
+	    self.y = self.y[~nans,:]
 
 
     def addpoints(self,newxpoints,xlims=None,xminstep=None,internalcall=False):

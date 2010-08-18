@@ -17,14 +17,18 @@ class scan_bands(scan_adaptive):
     ):
         scan_adaptive.__init__(self,
             chain.band_energies,
-            initial_xgrid = linspace(0,2*pi,9)[:-1],
             period = 2*pi,
             verbose = verbose,
             sameyscale = True,
 	    precision = precision,
         )
-        self.Nbands = self.y.shape[1]
+#        self.Nbands = self.y.shape[1]
 
+    def do_scan(self):
+	if len(self.x) < 3:
+	    self.addpoints(linspace(0,2*pi,9)[:-1])
+	scan_adaptive.do_scan(self)
+        self.Nbands = self.y.shape[1]
 
     def sort_crossing(self):
         x = concatenate(( self.x[-2:] - self.period, self.x ))
@@ -145,13 +149,13 @@ if __name__ == "__main__":
     set_printoptions(linewidth=10000)
 #    xyz = cnt.swcnt((10,10))
 #    xyz = cnt.chiral(10,10)
-    xyz = cnt.GNR_zigzag(37)
+    xyz = cnt.GNR_zigzag(6)
 #    chain = tightbinding.tight_binding_3rdNN_graphene(xyz)
 
     papa = tightbinding.papaconstantopoulos("c_par.105.tbparam")
     chain = papa.setup_chain(xyz)
     chain = NNlib_chain.chain([h[2::4,2::4] for h in chain.H],chain.xyz,S=[s[2::4,2::4] for s in chain.S])
-    chain = chain.multiply()
+#    chain = chain.multiply()
     
     scan = scan_bands(
 	chain,
